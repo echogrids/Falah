@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getDailyTotals } from "@/lib/reports/daily-totals";
+import { getLeaderboard } from "@/lib/reports/leaderboard";
 import { DailyScoreChart } from "@/components/reports/daily-score-chart";
+import { LeaderboardTable } from "@/components/reports/leaderboard-table";
 import {
   Card,
   CardContent,
@@ -25,7 +27,7 @@ export default async function ReportsPage() {
   const startIso = start.toISOString().slice(0, 10);
   const endIso = end.toISOString().slice(0, 10);
 
-  const [dailyTotals, { data: prayerEntries }] = await Promise.all([
+  const [dailyTotals, { data: prayerEntries }, leaderboard] = await Promise.all([
     getDailyTotals(supabase, user.id, WINDOW_DAYS),
     supabase
       .from("prayer_entries")
@@ -33,6 +35,7 @@ export default async function ReportsPage() {
       .eq("member_id", user.id)
       .gte("prayer_day", startIso)
       .lte("prayer_day", endIso),
+    getLeaderboard(supabase, startIso),
   ]);
 
   const totalScore = dailyTotals.reduce((sum, day) => sum + day.score, 0);
@@ -74,6 +77,18 @@ export default async function ReportsPage() {
         </CardHeader>
         <CardContent>
           <DailyScoreChart data={dailyTotals} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Leaderboard</CardTitle>
+          <CardDescription>
+            Last {WINDOW_DAYS} days, among who you can see.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LeaderboardTable entries={leaderboard} />
         </CardContent>
       </Card>
     </div>

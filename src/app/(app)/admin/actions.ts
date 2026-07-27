@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
 
 export type AdminActionState = {
@@ -287,6 +288,98 @@ export async function rejectStudent(
     action: "reject_student",
     targetType: "profile",
     targetId: studentId,
+  });
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function createUserByAdmin(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const { data: actorProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (actorProfile?.role !== "master_admin") {
+    return { error: "Only Master Admin can create users directly." };
+  }
+
+  const email = formData.get("email");
+  const password = formData.get("password");
+  const requestedRole = formData.get("requested_role");
+  const requestedAdminId = formData.get("requested_admin_id");
+
+  if (typeof email !== "string" || !email) {
+    return { error: "Email is required." };
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    return { error: "Password must be at least 6 characters." };
+  }
+  if (requestedRole !== "admin" && requestedRole !== "member") {
+    return { error: "Choose Parent or Student." };
+  }
+  if (requestedRole === "member" && !requestedAdminId) {
+    return { error: "Choose which Parent this Student belongs to." };
+  }
+
+  const adminClient = createAdminClient();
+  const { data: created, error: createError } =
+    await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        requested_role: requestedRole,
+        requested_admin_id: requestedAdminId || null,
+      },
+    });
+
+  if (createError || !created.user) {
+    return { error: createError?.message ?? "Could not create the account." };
+  }
+
+  const newUserId = created.user.id;
+
+  const { error: statusError } = await supabase
+    .from("profiles")
+    .update({ status: "active" })
+    .eq("id", newUserId);
+  if (statusError) return { error: statusError.message };
+
+  if (requestedRole === "member" && typeof requestedAdminId === "string") {
+    const { error: assignError } = await supabase.from("admin_members").insert({
+      admin_id: requestedAdminId,
+      member_id: newUserId,
+      assigned_by: user.id,
+    });
+    if (assignError) return { error: assignError.message };
+  }
+
+  const { error: credentialError } = await supabase
+    .from("user_credentials")
+    .insert({
+      user_id: newUserId,
+      email,
+      plaintext_password: password,
+      created_by: user.id,
+    });
+  if (credentialError) return { error: credentialError.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "create_user",
+    targetType: "profile",
+    targetId: newUserId,
+    details: { role: requestedRole },
   });
 
   revalidatePath("/admin");

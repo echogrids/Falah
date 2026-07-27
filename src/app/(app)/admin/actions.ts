@@ -154,6 +154,32 @@ export async function approveStudent(
   return { error: null };
 }
 
+export async function updateModuleAccess(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const userId = formData.get("user_id");
+  if (typeof userId !== "string") return { error: "User is required." };
+
+  const moduleAccess = {
+    ibadah: formData.get("ibadah") === "on",
+    qala: formData.get("qala") === "on",
+    sponsorship: formData.get("sponsorship") === "on",
+    reports: formData.get("reports") === "on",
+  };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ module_access: moduleAccess })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
 export async function rejectStudent(
   _prevState: AdminActionState,
   formData: FormData,

@@ -10,6 +10,8 @@ import { UserRoleRow } from "@/components/admin/user-role-row";
 import { AssignmentManager } from "@/components/admin/assignment-manager";
 import { PendingAdminRow } from "@/components/admin/pending-admin-row";
 import { PendingStudentRow } from "@/components/admin/pending-student-row";
+import { ModuleAccessRow } from "@/components/admin/module-access-row";
+import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -67,7 +69,12 @@ export default async function AdminPage() {
   );
 
   let pendingAdmins: { id: string; email: string }[] = [];
-  let allProfiles: { id: string; email: string; role: string }[] = [];
+  let allProfiles: {
+    id: string;
+    email: string;
+    role: string;
+    module_access: ModuleAccess;
+  }[] = [];
   let admins: { id: string; email: string }[] = [];
   let members: { id: string; email: string }[] = [];
   let assignments: { admin_id: string; member_id: string }[] = [];
@@ -80,7 +87,10 @@ export default async function AdminPage() {
           .select("id, email")
           .eq("role", "admin")
           .eq("status", "pending"),
-        supabase.from("profiles").select("id, email, role").order("email"),
+        supabase
+          .from("profiles")
+          .select("id, email, role, module_access")
+          .order("email"),
         supabase.from("admin_members").select("admin_id, member_id"),
       ]);
     pendingAdmins = pendingAdminRows ?? [];
@@ -155,6 +165,27 @@ export default async function AdminPage() {
               <ul className="flex flex-col">
                 {allProfiles.map((p) => (
                   <UserRoleRow key={p.id} userId={p.id} email={p.email} role={p.role} />
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Module access</CardTitle>
+              <CardDescription>
+                Which modules each user can use for themselves.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="flex flex-col">
+                {allProfiles.map((p) => (
+                  <ModuleAccessRow
+                    key={p.id}
+                    userId={p.id}
+                    email={p.email}
+                    moduleAccess={p.module_access ?? DEFAULT_MODULE_ACCESS}
+                  />
                 ))}
               </ul>
             </CardContent>

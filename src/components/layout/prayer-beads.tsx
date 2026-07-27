@@ -49,7 +49,7 @@ export function PrayerBeads({
               <span className="text-xs font-medium text-foreground">
                 {prayer.label}
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="font-arabic text-xs text-muted-foreground">
                 {prayer.arabic}
               </span>
             </div>

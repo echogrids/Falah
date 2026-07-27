@@ -48,7 +48,7 @@ export function QalaPrayerCard({
       <CardHeader>
         <CardTitle className="flex items-baseline gap-2">
           {label}
-          <span className="text-sm font-normal text-muted-foreground">
+          <span className="font-arabic text-sm font-normal text-muted-foreground">
             {arabic}
           </span>
         </CardTitle>

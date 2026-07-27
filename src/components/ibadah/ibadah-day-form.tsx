@@ -82,7 +82,7 @@ export function IbadahDayForm({
               >
                 <div className="flex items-baseline gap-2">
                   <span className="font-medium">{prayer.label}</span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="font-arabic text-sm text-muted-foreground">
                     {prayer.arabic}
                   </span>
                 </div>
@@ -154,7 +154,9 @@ export function IbadahDayForm({
                     defaultChecked={Boolean(existing)}
                   />
                   {item.label}
-                  <span className="text-muted-foreground">{item.arabic}</span>
+                  <span className="font-arabic text-muted-foreground">
+                    {item.arabic}
+                  </span>
                 </label>
                 <Input
                   type="number"

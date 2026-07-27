@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getDailyTotals } from "@/lib/reports/daily-totals";
 import { getLeaderboard } from "@/lib/reports/leaderboard";
+import { getBadges } from "@/lib/reports/badges";
 import { DailyScoreChart } from "@/components/reports/daily-score-chart";
 import { LeaderboardTable } from "@/components/reports/leaderboard-table";
+import { BadgesList } from "@/components/reports/badges-list";
 import {
   Card,
   CardContent,
@@ -27,16 +29,18 @@ export default async function ReportsPage() {
   const startIso = start.toISOString().slice(0, 10);
   const endIso = end.toISOString().slice(0, 10);
 
-  const [dailyTotals, { data: prayerEntries }, leaderboard] = await Promise.all([
-    getDailyTotals(supabase, user.id, WINDOW_DAYS),
-    supabase
-      .from("prayer_entries")
-      .select("status")
-      .eq("member_id", user.id)
-      .gte("prayer_day", startIso)
-      .lte("prayer_day", endIso),
-    getLeaderboard(supabase, startIso),
-  ]);
+  const [dailyTotals, { data: prayerEntries }, leaderboard, badges] =
+    await Promise.all([
+      getDailyTotals(supabase, user.id, WINDOW_DAYS),
+      supabase
+        .from("prayer_entries")
+        .select("status")
+        .eq("member_id", user.id)
+        .gte("prayer_day", startIso)
+        .lte("prayer_day", endIso),
+      getLeaderboard(supabase, startIso),
+      getBadges(supabase, user.id),
+    ]);
 
   const totalScore = dailyTotals.reduce((sum, day) => sum + day.score, 0);
   const loggedCount = prayerEntries?.length ?? 0;
@@ -77,6 +81,15 @@ export default async function ReportsPage() {
         </CardHeader>
         <CardContent>
           <DailyScoreChart data={dailyTotals} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Badges</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BadgesList badges={badges} />
         </CardContent>
       </Card>
 

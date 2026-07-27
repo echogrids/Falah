@@ -11,6 +11,8 @@ import { AssignmentManager } from "@/components/admin/assignment-manager";
 import { PendingAdminRow } from "@/components/admin/pending-admin-row";
 import { PendingStudentRow } from "@/components/admin/pending-student-row";
 import { ModuleAccessRow } from "@/components/admin/module-access-row";
+import { CreateUserForm } from "@/components/admin/create-user-form";
+import { CredentialsTable } from "@/components/admin/credentials-table";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
 
 export default async function AdminPage() {
@@ -101,26 +103,41 @@ export default async function AdminPage() {
   let admins: { id: string; email: string }[] = [];
   let members: { id: string; email: string }[] = [];
   let assignments: { admin_id: string; member_id: string }[] = [];
+  let credentials: {
+    id: string;
+    email: string;
+    plaintext_password: string;
+    created_at: string;
+  }[] = [];
 
   if (isMasterAdmin) {
-    const [{ data: pendingAdminRows }, { data: profiles }, { data: assignmentRows }] =
-      await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, email")
-          .eq("role", "admin")
-          .eq("status", "pending"),
-        supabase
-          .from("profiles")
-          .select("id, email, role, module_access")
-          .order("email"),
-        supabase.from("admin_members").select("admin_id, member_id"),
-      ]);
+    const [
+      { data: pendingAdminRows },
+      { data: profiles },
+      { data: assignmentRows },
+      { data: credentialRows },
+    ] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, email")
+        .eq("role", "admin")
+        .eq("status", "pending"),
+      supabase
+        .from("profiles")
+        .select("id, email, role, module_access")
+        .order("email"),
+      supabase.from("admin_members").select("admin_id, member_id"),
+      supabase
+        .from("user_credentials")
+        .select("id, email, plaintext_password, created_at")
+        .order("created_at", { ascending: false }),
+    ]);
     pendingAdmins = pendingAdminRows ?? [];
     allProfiles = profiles ?? [];
     admins = allProfiles.filter((p) => p.role === "admin" || p.role === "master_admin");
     members = allProfiles.filter((p) => p.role === "member");
     assignments = assignmentRows ?? [];
+    credentials = credentialRows ?? [];
   }
 
   return (
@@ -224,6 +241,30 @@ export default async function AdminPage() {
 
       {isMasterAdmin ? (
         <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Create a user</CardTitle>
+              <CardDescription>
+                Goes straight to active — no approval step needed.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CreateUserForm admins={admins} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Created accounts</CardTitle>
+              <CardDescription>
+                Usernames and passwords for accounts created here.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CredentialsTable credentials={credentials} />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>All users</CardTitle>

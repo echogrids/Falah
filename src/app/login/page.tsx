@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -17,8 +18,14 @@ export default function LoginPage() {
             Enter your email and password to continue.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
           <LoginForm />
+          <p className="text-center text-sm text-muted-foreground">
+            No account?{" "}
+            <Link href="/signup" className="underline underline-offset-4">
+              Sign up
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>

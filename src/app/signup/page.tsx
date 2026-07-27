@@ -6,8 +6,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SignupForm } from "@/components/auth/signup-form";
+import { createClient } from "@/lib/supabase/server";
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  const supabase = await createClient();
+  const { data: admins } = await supabase.rpc("list_admins_for_signup");
+
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <Card className="w-full max-w-sm">
@@ -18,7 +22,7 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SignupForm />
+          <SignupForm admins={admins ?? []} />
         </CardContent>
       </Card>
     </div>

@@ -1,12 +1,7 @@
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { LogoutButton } from "@/components/auth/logout-button";
-
-const roleLabels: Record<string, string> = {
-  master_admin: "Master Admin",
-  admin: "Admin",
-  member: "Member",
-};
+import { roleLabel } from "@/lib/roles";
 
 export function AppShell({
   email,
@@ -32,7 +27,7 @@ export function AppShell({
               {email}
             </span>
             <span className="text-xs text-muted-foreground">
-              {roleLabels[role] ?? role}
+              {roleLabel(role)}
             </span>
           </div>
           <LogoutButton />

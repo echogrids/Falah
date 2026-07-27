@@ -44,10 +44,10 @@ export function AssignmentManager({
     <div className="flex flex-col gap-4">
       <form action={assignAction} className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">Admin</span>
+          <span className="text-sm font-medium">Parent</span>
           <Select name="admin_id">
             <SelectTrigger className="w-56">
-              <SelectValue placeholder="Choose an Admin" />
+              <SelectValue placeholder="Choose a Parent" />
             </SelectTrigger>
             <SelectContent>
               {admins.map((admin) => (
@@ -59,10 +59,10 @@ export function AssignmentManager({
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium">Member</span>
+          <span className="text-sm font-medium">Student</span>
           <Select name="member_id">
             <SelectTrigger className="w-56">
-              <SelectValue placeholder="Choose a Member" />
+              <SelectValue placeholder="Choose a Student" />
             </SelectTrigger>
             <SelectContent>
               {members.map((member) => (

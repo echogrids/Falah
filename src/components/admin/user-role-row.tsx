@@ -9,11 +9,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { updateUserRole, adminInitialState } from "@/app/(app)/admin/actions";
+import { ROLE_LABELS } from "@/lib/roles";
 
 const ROLE_OPTIONS = [
-  { value: "member", label: "Member" },
-  { value: "admin", label: "Admin" },
-  { value: "master_admin", label: "Master Admin" },
+  { value: "member", label: ROLE_LABELS.member },
+  { value: "admin", label: ROLE_LABELS.admin },
+  { value: "master_admin", label: ROLE_LABELS.master_admin },
 ] as const;
 
 export function UserRoleRow({

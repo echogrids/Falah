@@ -15,19 +15,23 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   module: keyof ModuleAccess | null;
+  // Shown directly in the mobile bottom tab bar. Everything else collapses
+  // into the "More" tab so the bar never carries more than 5 slots.
+  primary: boolean;
 };
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, module: null },
-  { href: "/ibadah", label: "Ibadah", icon: Moon, module: "ibadah" },
-  { href: "/qala", label: "Qala", icon: RotateCcw, module: "qala" },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, module: null, primary: true },
+  { href: "/ibadah", label: "Ibadah", icon: Moon, module: "ibadah", primary: true },
+  { href: "/qala", label: "Qala", icon: RotateCcw, module: "qala", primary: true },
   {
     href: "/sponsorship",
     label: "Sponsorship",
     icon: HeartHandshake,
     module: "sponsorship",
+    primary: true,
   },
-  { href: "/reports", label: "Reports", icon: BarChart3, module: "reports" },
-  { href: "/admin", label: "Users", icon: Users, module: null },
-  { href: "/settings", label: "Settings", icon: Settings, module: null },
+  { href: "/reports", label: "Reports", icon: BarChart3, module: "reports", primary: false },
+  { href: "/admin", label: "Users", icon: Users, module: null, primary: false },
+  { href: "/settings", label: "Settings", icon: Settings, module: null, primary: false },
 ];

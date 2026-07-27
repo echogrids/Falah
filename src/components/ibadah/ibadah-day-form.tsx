@@ -104,12 +104,12 @@ export function IbadahDayForm({
                     </label>
                   ))}
                 </RadioGroup>
-                <div className="flex flex-wrap gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <Select
                     name={`${prayer.key}_congregation`}
                     defaultValue={existing?.congregation ?? undefined}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Congregation" />
                     </SelectTrigger>
                     <SelectContent>
@@ -124,7 +124,7 @@ export function IbadahDayForm({
                     name={`${prayer.key}_location`}
                     defaultValue={existing?.location ?? undefined}
                   >
-                    <SelectTrigger className="w-40">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -216,7 +216,7 @@ export function IbadahDayForm({
               name="fasting_type"
               defaultValue={dailyTracker.fasting_type ?? undefined}
             >
-              <SelectTrigger id="fasting_type" className="w-48">
+              <SelectTrigger id="fasting_type" className="w-full sm:w-64">
                 <SelectValue placeholder="Not fasting" />
               </SelectTrigger>
               <SelectContent>
@@ -235,7 +235,7 @@ export function IbadahDayForm({
         <p className="text-sm text-destructive">{state.error}</p>
       ) : null}
 
-      <Button type="submit" disabled={isPending} className="w-fit">
+      <Button type="submit" disabled={isPending} className="w-full sm:w-fit">
         {isPending ? "Saving..." : "Save"}
       </Button>
     </form>

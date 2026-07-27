@@ -62,13 +62,13 @@ export function QalaPrayerCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {balance ? (
-          <form action={completeAction} className="flex items-center gap-3">
+          <form action={completeAction} className="flex flex-col gap-2">
             <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
             <Button
               type="submit"
               disabled={isCompleting || balance.current_balance <= 0}
-              size="sm"
+              className="w-full sm:w-auto"
             >
               Mark one done
             </Button>
@@ -79,7 +79,7 @@ export function QalaPrayerCard({
             ) : null}
           </form>
         ) : canManage ? (
-          <form action={setAction} className="flex items-center gap-3">
+          <form action={setAction} className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
             <Input
@@ -87,9 +87,9 @@ export function QalaPrayerCard({
               name="initial_balance"
               min={0}
               placeholder="Outstanding count"
-              className="w-40"
+              className="w-full sm:w-40"
             />
-            <Button type="submit" disabled={isSetting} size="sm">
+            <Button type="submit" disabled={isSetting} className="w-full sm:w-auto">
               Set balance
             </Button>
             {setState.error ? (
@@ -107,7 +107,7 @@ export function QalaPrayerCard({
         {balance && canManage ? (
           <form
             action={adjustAction}
-            className="flex flex-wrap items-center gap-2 border-t border-border pt-4"
+            className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:flex-wrap"
           >
             <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
@@ -115,10 +115,15 @@ export function QalaPrayerCard({
               type="number"
               name="delta"
               placeholder="+/- adjustment"
-              className="w-32"
+              className="w-full sm:w-32"
             />
-            <Input name="reason" placeholder="Reason" className="w-48" />
-            <Button type="submit" disabled={isAdjusting} size="sm" variant="outline">
+            <Input name="reason" placeholder="Reason" className="w-full sm:w-48" />
+            <Button
+              type="submit"
+              disabled={isAdjusting}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
               Adjust
             </Button>
             {adjustState.error ? (

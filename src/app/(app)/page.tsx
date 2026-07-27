@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { PrayerBeads } from "@/components/layout/prayer-beads";
 import {
   Card,
@@ -7,7 +9,28 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default function DashboardPage() {
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const today = todayIso();
+  const { data: prayerEntries } = await supabase
+    .from("prayer_entries")
+    .select("prayer, status")
+    .eq("member_id", user?.id)
+    .eq("prayer_day", today);
+
+  const statuses: Record<string, string> = {};
+  for (const entry of prayerEntries ?? []) {
+    statuses[entry.prayer] = entry.status;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -21,11 +44,13 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Today&apos;s prayers</CardTitle>
           <CardDescription>
-            Entries and scoring open once Module 1 is built.
+            <Link href="/ibadah" className="underline underline-offset-4">
+              Log today&apos;s Ibadah
+            </Link>
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <PrayerBeads />
+          <PrayerBeads statuses={statuses} />
         </CardContent>
       </Card>
     </div>

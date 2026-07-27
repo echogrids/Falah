@@ -12,10 +12,8 @@ import {
 } from "@/components/ui/card";
 import { FASTING_TYPE_OPTIONS } from "@/lib/ibadah/constants";
 import type { ScoringSettings, ScoringMilestone } from "@/lib/ibadah/scoring";
-import {
-  updateScoringSettings,
-  settingsInitialState,
-} from "@/app/(app)/settings/actions";
+import { updateScoringSettings } from "@/app/(app)/settings/actions";
+import { initialActionState } from "@/lib/action-state";
 
 const BASE_POINT_FIELDS: { key: keyof ScoringSettings; label: string }[] = [
   { key: "on_time_points", label: "On Time" },
@@ -76,7 +74,7 @@ export function ScoringSettingsForm({
 }) {
   const [state, formAction, isPending] = useActionState(
     updateScoringSettings,
-    settingsInitialState,
+    initialActionState,
   );
 
   return (

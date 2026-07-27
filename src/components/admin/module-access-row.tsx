@@ -2,10 +2,8 @@
 
 import { useActionState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  updateModuleAccess,
-  adminInitialState,
-} from "@/app/(app)/admin/actions";
+import { updateModuleAccess } from "@/app/(app)/admin/actions";
+import { initialActionState } from "@/lib/action-state";
 import type { ModuleAccess } from "@/lib/module-access";
 
 const MODULES: { key: keyof ModuleAccess; label: string }[] = [
@@ -26,7 +24,7 @@ export function ModuleAccessRow({
 }) {
   const [state, formAction] = useActionState(
     updateModuleAccess,
-    adminInitialState,
+    initialActionState,
   );
 
   return (

@@ -8,9 +8,6 @@ export type AdminActionState = {
   error: string | null;
 };
 
-const initialState: AdminActionState = { error: null };
-export { initialState as adminInitialState };
-
 export async function updateUserRole(
   _prevState: AdminActionState,
   formData: FormData,

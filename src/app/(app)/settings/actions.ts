@@ -9,9 +9,6 @@ export type SettingsActionState = {
   error: string | null;
 };
 
-const initialState: SettingsActionState = { error: null };
-export { initialState as settingsInitialState };
-
 const BASE_POINT_FIELDS = [
   "on_time_points",
   "late_points",

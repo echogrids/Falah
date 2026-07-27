@@ -2,11 +2,8 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  approveAdmin,
-  rejectAdmin,
-  adminInitialState,
-} from "@/app/(app)/admin/actions";
+import { approveAdmin, rejectAdmin } from "@/app/(app)/admin/actions";
+import { initialActionState } from "@/lib/action-state";
 
 export function PendingAdminRow({
   userId,
@@ -17,11 +14,11 @@ export function PendingAdminRow({
 }) {
   const [approveState, approveAction] = useActionState(
     approveAdmin,
-    adminInitialState,
+    initialActionState,
   );
   const [rejectState, rejectAction] = useActionState(
     rejectAdmin,
-    adminInitialState,
+    initialActionState,
   );
 
   return (

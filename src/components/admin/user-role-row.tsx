@@ -8,7 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { updateUserRole, adminInitialState } from "@/app/(app)/admin/actions";
+import { updateUserRole } from "@/app/(app)/admin/actions";
+import { initialActionState } from "@/lib/action-state";
 import { ROLE_LABELS } from "@/lib/roles";
 
 const ROLE_OPTIONS = [
@@ -28,7 +29,7 @@ export function UserRoleRow({
 }) {
   const [state, formAction] = useActionState(
     updateUserRole,
-    adminInitialState,
+    initialActionState,
   );
 
   return (

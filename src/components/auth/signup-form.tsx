@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { signup, signupInitialState } from "@/app/signup/actions";
+import { signup } from "@/app/signup/actions";
+
+const signupInitialState = { error: null, message: null };
 
 type AdminOption = { id: string; email: string };
 

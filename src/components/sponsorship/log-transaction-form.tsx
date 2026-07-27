@@ -11,10 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  logSponsorshipTransaction,
-  sponsorshipInitialState,
-} from "@/app/(app)/sponsorship/actions";
+import { logSponsorshipTransaction } from "@/app/(app)/sponsorship/actions";
+import { initialActionState } from "@/lib/action-state";
 
 const TYPE_OPTIONS = [
   { value: "intended", label: "Intended" },
@@ -25,7 +23,7 @@ const TYPE_OPTIONS = [
 export function LogTransactionForm({ memberId }: { memberId: string }) {
   const [state, formAction, isPending] = useActionState(
     logSponsorshipTransaction,
-    sponsorshipInitialState,
+    initialActionState,
   );
   const [quantity, setQuantity] = useState("");
   const [unitPrice, setUnitPrice] = useState("");

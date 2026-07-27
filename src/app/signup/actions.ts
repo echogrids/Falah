@@ -8,10 +8,6 @@ export type SignupState = {
   message: string | null;
 };
 
-const initialState: SignupState = { error: null, message: null };
-
-export { initialState as signupInitialState };
-
 export async function signup(
   _prevState: SignupState,
   formData: FormData,

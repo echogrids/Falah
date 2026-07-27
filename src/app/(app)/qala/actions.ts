@@ -8,9 +8,6 @@ export type QalaActionState = {
   error: string | null;
 };
 
-const initialState: QalaActionState = { error: null };
-export { initialState as qalaInitialState };
-
 export async function completeQala(
   _prevState: QalaActionState,
   formData: FormData,

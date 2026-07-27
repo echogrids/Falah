@@ -9,11 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  assignMember,
-  unassignMember,
-  adminInitialState,
-} from "@/app/(app)/admin/actions";
+import { assignMember, unassignMember } from "@/app/(app)/admin/actions";
+import { initialActionState } from "@/lib/action-state";
 
 type Profile = { id: string; email: string };
 type Assignment = { admin_id: string; member_id: string };
@@ -29,11 +26,11 @@ export function AssignmentManager({
 }) {
   const [assignState, assignAction, isAssigning] = useActionState(
     assignMember,
-    adminInitialState,
+    initialActionState,
   );
   const [unassignState, unassignAction] = useActionState(
     unassignMember,
-    adminInitialState,
+    initialActionState,
   );
 
   const emailById = new Map(

@@ -14,8 +14,8 @@ import {
   completeQala,
   setQalaBalance,
   adjustQalaBalance,
-  qalaInitialState,
 } from "@/app/(app)/qala/actions";
+import { initialActionState } from "@/lib/action-state";
 
 export function QalaPrayerCard({
   memberId,
@@ -34,15 +34,15 @@ export function QalaPrayerCard({
 }) {
   const [completeState, completeAction, isCompleting] = useActionState(
     completeQala,
-    qalaInitialState,
+    initialActionState,
   );
   const [setState, setAction, isSetting] = useActionState(
     setQalaBalance,
-    qalaInitialState,
+    initialActionState,
   );
   const [adjustState, adjustAction, isAdjusting] = useActionState(
     adjustQalaBalance,
-    qalaInitialState,
+    initialActionState,
   );
 
   return (

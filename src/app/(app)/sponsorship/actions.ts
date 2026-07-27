@@ -8,9 +8,6 @@ export type SponsorshipActionState = {
   error: string | null;
 };
 
-const initialState: SponsorshipActionState = { error: null };
-export { initialState as sponsorshipInitialState };
-
 export async function logSponsorshipTransaction(
   _prevState: SponsorshipActionState,
   formData: FormData,

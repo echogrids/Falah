@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log";
 import {
   salahScore,
   additionalWorshipScore,
@@ -138,6 +139,14 @@ export async function saveIbadahDay(
       return { error: worshipError.message };
     }
   }
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "save_ibadah_day",
+    targetType: "ibadah_entry",
+    targetId: memberId,
+    details: { prayer_day: prayerDay },
+  });
 
   revalidatePath("/ibadah");
   return { error: null };

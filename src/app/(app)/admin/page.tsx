@@ -46,6 +46,29 @@ export default async function AdminPage() {
 
   const isMasterAdmin = profile.role === "master_admin";
 
+  const { data: activityRows } = await supabase
+    .from("activity_log")
+    .select("id, actor_id, action, target_type, target_id, details, created_at")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const activityUserIds = Array.from(
+    new Set(
+      (activityRows ?? [])
+        .flatMap((row) => [row.actor_id, row.target_id])
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const { data: activityProfiles } =
+    activityUserIds.length > 0
+      ? await supabase.from("profiles").select("id, email").in("id", activityUserIds)
+      : { data: [] };
+
+  const activityEmail = new Map(
+    (activityProfiles ?? []).map((p) => [p.id, p.email]),
+  );
+
   const { data: pendingStudents } = await supabase
     .from("profiles")
     .select("id, email, requested_admin_id")
@@ -154,6 +177,50 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent activity</CardTitle>
+          <CardDescription>
+            {isMasterAdmin
+              ? "Everything happening in Falah."
+              : "Activity involving you and your assigned Students."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {(activityRows ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity yet.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {(activityRows ?? []).map((row) => (
+                <li
+                  key={row.id}
+                  className="flex flex-col gap-0.5 border-b border-border py-2 text-sm last:border-0"
+                >
+                  <span>
+                    <span className="font-medium">
+                      {activityEmail.get(row.actor_id) ?? "Unknown"}
+                    </span>{" "}
+                    {row.action.replaceAll("_", " ")}
+                    {row.target_id ? (
+                      <>
+                        {" "}
+                        for{" "}
+                        <span className="font-medium">
+                          {activityEmail.get(row.target_id) ?? "Unknown"}
+                        </span>
+                      </>
+                    ) : null}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(row.created_at).toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       {isMasterAdmin ? (
         <>

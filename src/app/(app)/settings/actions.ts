@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { FASTING_TYPE_OPTIONS } from "@/lib/ibadah/constants";
+import { logActivity } from "@/lib/activity-log";
 
 export type SettingsActionState = {
   error: string | null;
@@ -77,6 +78,12 @@ export async function updateScoringSettings(
     .eq("id", true);
 
   if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "update_scoring_settings",
+    targetType: "scoring_settings",
+  });
 
   revalidatePath("/settings");
   return { error: null };

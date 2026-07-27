@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log";
 
 export type AdminActionState = {
   error: string | null;
@@ -15,6 +16,11 @@ export async function updateUserRole(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const userId = formData.get("user_id");
   const role = formData.get("role");
 
@@ -28,6 +34,14 @@ export async function updateUserRole(
     .eq("id", userId);
 
   if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "update_role",
+    targetType: "profile",
+    targetId: userId,
+    details: { role },
+  });
 
   revalidatePath("/admin");
   return { error: null };
@@ -59,6 +73,14 @@ export async function assignMember(
 
   if (error) return { error: error.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "assign_member",
+    targetType: "admin_members",
+    targetId: memberId,
+    details: { admin_id: adminId },
+  });
+
   revalidatePath("/admin");
   return { error: null };
 }
@@ -68,6 +90,11 @@ export async function unassignMember(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const adminId = formData.get("admin_id");
   const memberId = formData.get("member_id");
 
@@ -83,6 +110,14 @@ export async function unassignMember(
 
   if (error) return { error: error.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "unassign_member",
+    targetType: "admin_members",
+    targetId: memberId,
+    details: { admin_id: adminId },
+  });
+
   revalidatePath("/admin");
   return { error: null };
 }
@@ -92,6 +127,11 @@ export async function approveAdmin(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const userId = formData.get("user_id");
   if (typeof userId !== "string") return { error: "User is required." };
 
@@ -102,6 +142,13 @@ export async function approveAdmin(
 
   if (error) return { error: error.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "approve_admin",
+    targetType: "profile",
+    targetId: userId,
+  });
+
   revalidatePath("/admin");
   return { error: null };
 }
@@ -111,6 +158,11 @@ export async function rejectAdmin(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const userId = formData.get("user_id");
   if (typeof userId !== "string") return { error: "User is required." };
 
@@ -121,6 +173,13 @@ export async function rejectAdmin(
 
   if (error) return { error: error.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "reject_admin",
+    targetType: "profile",
+    targetId: userId,
+  });
+
   revalidatePath("/admin");
   return { error: null };
 }
@@ -130,6 +189,11 @@ export async function approveStudent(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const studentId = formData.get("student_id");
   const adminId = formData.get("admin_id");
 
@@ -150,6 +214,14 @@ export async function approveStudent(
     .eq("id", studentId);
   if (statusError) return { error: statusError.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "approve_student",
+    targetType: "profile",
+    targetId: studentId,
+    details: { admin_id: adminId },
+  });
+
   revalidatePath("/admin");
   return { error: null };
 }
@@ -159,6 +231,11 @@ export async function updateModuleAccess(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const userId = formData.get("user_id");
   if (typeof userId !== "string") return { error: "User is required." };
 
@@ -176,6 +253,14 @@ export async function updateModuleAccess(
 
   if (error) return { error: error.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "update_module_access",
+    targetType: "profile",
+    targetId: userId,
+    details: moduleAccess,
+  });
+
   revalidatePath("/admin");
   return { error: null };
 }
@@ -185,6 +270,11 @@ export async function rejectStudent(
   formData: FormData,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
   const studentId = formData.get("student_id");
   if (typeof studentId !== "string") return { error: "Student is required." };
 
@@ -194,6 +284,13 @@ export async function rejectStudent(
     .eq("id", studentId);
 
   if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "reject_student",
+    targetType: "profile",
+    targetId: studentId,
+  });
 
   revalidatePath("/admin");
   return { error: null };

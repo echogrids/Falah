@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log";
 
 export type QalaActionState = {
   error: string | null;
@@ -32,6 +33,14 @@ export async function completeQala(
   });
 
   if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "complete_qala",
+    targetType: "qala_transaction",
+    targetId: memberId,
+    details: { prayer },
+  });
 
   revalidatePath("/qala");
   return { error: null };
@@ -70,6 +79,14 @@ export async function setQalaBalance(
 
   if (error) return { error: error.message };
 
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "set_qala_balance",
+    targetType: "qala_balance",
+    targetId: memberId,
+    details: { prayer, initial_balance: balance },
+  });
+
   revalidatePath("/qala");
   return { error: null };
 }
@@ -107,6 +124,14 @@ export async function adjustQalaBalance(
   });
 
   if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "adjust_qala_balance",
+    targetType: "qala_balance",
+    targetId: memberId,
+    details: { prayer, delta: Number(delta), reason },
+  });
 
   revalidatePath("/qala");
   return { error: null };

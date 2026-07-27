@@ -4,6 +4,7 @@ import {
   Moon,
   RotateCcw,
   HeartHandshake,
+  BarChart3,
   Users,
   Settings,
 } from "lucide-react";
@@ -19,6 +20,7 @@ export const navItems: NavItem[] = [
   { href: "/ibadah", label: "Ibadah", icon: Moon },
   { href: "/qala", label: "Qala", icon: RotateCcw },
   { href: "/sponsorship", label: "Sponsorship", icon: HeartHandshake },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/admin", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

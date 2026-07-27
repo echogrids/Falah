@@ -113,15 +113,17 @@ export default async function SponsorshipPage({
               {transactions.map((transaction) => (
                 <li
                   key={transaction.id}
-                  className="flex items-center justify-between border-b border-border pb-2 text-sm last:border-0"
+                  className="flex flex-col gap-0.5 border-b border-border py-2 text-sm last:border-0"
                 >
-                  <span className="capitalize">{transaction.type}</span>
-                  <span className="text-muted-foreground">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="capitalize">{transaction.type}</span>
+                    <span className="font-medium">{transaction.amount}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
                     {transaction.quantity && transaction.unit_price
                       ? `${transaction.quantity} × ${transaction.unit_price}`
                       : transaction.note}
                   </span>
-                  <span className="font-medium">{transaction.amount}</span>
                 </li>
               ))}
             </ul>

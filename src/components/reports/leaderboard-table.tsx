@@ -12,15 +12,15 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
       {entries.map((entry, index) => (
         <li
           key={entry.memberId}
-          className="flex items-center justify-between border-b border-border pb-2 text-sm last:border-0"
+          className="flex items-center justify-between gap-2 border-b border-border py-2 text-sm last:border-0"
         >
-          <span className="flex items-center gap-3">
-            <span className="flex size-6 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
               {index + 1}
             </span>
-            {entry.email}
+            <span className="truncate">{entry.email}</span>
           </span>
-          <span className="font-medium">{entry.score}</span>
+          <span className="shrink-0 font-medium">{entry.score}</span>
         </li>
       ))}
     </ol>

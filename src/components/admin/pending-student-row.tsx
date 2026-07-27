@@ -26,8 +26,8 @@ export function PendingStudentRow({
   );
 
   return (
-    <li className="flex items-center justify-between gap-4 border-b border-border py-3 text-sm last:border-0">
-      <span className="truncate">
+    <li className="flex flex-col gap-2 border-b border-border py-3 text-sm last:border-0 sm:flex-row sm:items-center sm:justify-between">
+      <span className="min-w-0 truncate">
         {email}{" "}
         <span className="text-muted-foreground">
           → requested {requestedAdminEmail}

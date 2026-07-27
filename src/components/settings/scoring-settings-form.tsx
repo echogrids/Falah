@@ -146,7 +146,7 @@ export function ScoringSettingsForm({
         <p className="text-sm text-destructive">{state.error}</p>
       ) : null}
 
-      <Button type="submit" disabled={isPending} className="w-fit">
+      <Button type="submit" disabled={isPending} className="w-full sm:w-fit">
         {isPending ? "Saving..." : "Save scoring settings"}
       </Button>
     </form>

@@ -34,7 +34,7 @@ export function UserRoleRow({
 
   return (
     <li className="flex items-center justify-between gap-4 border-b border-border py-3 text-sm last:border-0">
-      <span className="truncate">{email}</span>
+      <span className="min-w-0 truncate">{email}</span>
       <form
         id={`role-form-${userId}`}
         action={formAction}

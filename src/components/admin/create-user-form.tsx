@@ -84,7 +84,7 @@ export function CreateUserForm({ admins }: { admins: AdminOption[] }) {
         <p className="text-sm text-destructive">{state.error}</p>
       ) : null}
 
-      <Button type="submit" disabled={isPending} className="w-fit">
+      <Button type="submit" disabled={isPending} className="w-full sm:w-fit">
         {isPending ? "Creating..." : "Create account"}
       </Button>
     </form>

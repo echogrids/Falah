@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/card";
 import { UserRoleRow } from "@/components/admin/user-role-row";
 import { AssignmentManager } from "@/components/admin/assignment-manager";
+import { PendingAdminRow } from "@/components/admin/pending-admin-row";
+import { PendingStudentRow } from "@/components/admin/pending-student-row";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -21,7 +23,7 @@ export default async function AdminPage() {
     .eq("id", user?.id)
     .single();
 
-  if (profile?.role !== "master_admin") {
+  if (profile?.role === "member" || !profile) {
     return (
       <div className="flex flex-col gap-6">
         <h1 className="font-heading text-2xl font-semibold text-foreground">
@@ -29,9 +31,9 @@ export default async function AdminPage() {
         </h1>
         <Card>
           <CardHeader>
-            <CardTitle>Master Admin only</CardTitle>
+            <CardTitle>Not available</CardTitle>
             <CardDescription>
-              Ask your Master Admin for account or assignment changes.
+              Ask your Parent for account changes.
             </CardDescription>
           </CardHeader>
           <CardContent />
@@ -40,15 +42,53 @@ export default async function AdminPage() {
     );
   }
 
-  const [{ data: profiles }, { data: assignments }] = await Promise.all([
-    supabase.from("profiles").select("id, email, role").order("email"),
-    supabase.from("admin_members").select("admin_id, member_id"),
-  ]);
+  const isMasterAdmin = profile.role === "master_admin";
 
-  const admins = (profiles ?? []).filter(
-    (p) => p.role === "admin" || p.role === "master_admin",
+  const { data: pendingStudents } = await supabase
+    .from("profiles")
+    .select("id, email, requested_admin_id")
+    .eq("role", "member")
+    .eq("status", "pending");
+
+  const requestedAdminIds = Array.from(
+    new Set((pendingStudents ?? []).map((s) => s.requested_admin_id).filter(Boolean)),
+  ) as string[];
+
+  const { data: requestedAdmins } =
+    requestedAdminIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, email")
+          .in("id", requestedAdminIds)
+      : { data: [] };
+
+  const requestedAdminEmail = new Map(
+    (requestedAdmins ?? []).map((admin) => [admin.id, admin.email]),
   );
-  const members = (profiles ?? []).filter((p) => p.role === "member");
+
+  let pendingAdmins: { id: string; email: string }[] = [];
+  let allProfiles: { id: string; email: string; role: string }[] = [];
+  let admins: { id: string; email: string }[] = [];
+  let members: { id: string; email: string }[] = [];
+  let assignments: { admin_id: string; member_id: string }[] = [];
+
+  if (isMasterAdmin) {
+    const [{ data: pendingAdminRows }, { data: profiles }, { data: assignmentRows }] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, email")
+          .eq("role", "admin")
+          .eq("status", "pending"),
+        supabase.from("profiles").select("id, email, role").order("email"),
+        supabase.from("admin_members").select("admin_id, member_id"),
+      ]);
+    pendingAdmins = pendingAdminRows ?? [];
+    allProfiles = profiles ?? [];
+    admins = allProfiles.filter((p) => p.role === "admin" || p.role === "master_admin");
+    members = allProfiles.filter((p) => p.role === "member");
+    assignments = assignmentRows ?? [];
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,38 +97,80 @@ export default async function AdminPage() {
           Users
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Manage roles and Admin-to-Member assignments.
+          Approvals, roles, and Parent-to-Student assignments.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All users</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="flex flex-col">
-            {(profiles ?? []).map((p) => (
-              <UserRoleRow key={p.id} userId={p.id} email={p.email} role={p.role} />
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      {isMasterAdmin && pendingAdmins.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Parent approvals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col">
+              {pendingAdmins.map((admin) => (
+                <PendingAdminRow key={admin.id} userId={admin.id} email={admin.email} />
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin-to-Member assignments</CardTitle>
-          <CardDescription>
-            A Member can have multiple Admins.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AssignmentManager
-            admins={admins}
-            members={members}
-            assignments={assignments ?? []}
-          />
-        </CardContent>
-      </Card>
+      {(pendingStudents ?? []).length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Student requests</CardTitle>
+            <CardDescription>
+              {isMasterAdmin
+                ? "All students awaiting approval."
+                : "Students who requested you as their Parent."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="flex flex-col">
+              {(pendingStudents ?? []).map((student) => (
+                <PendingStudentRow
+                  key={student.id}
+                  studentId={student.id}
+                  email={student.email}
+                  requestedAdminId={student.requested_admin_id}
+                  requestedAdminEmail={
+                    requestedAdminEmail.get(student.requested_admin_id) ??
+                    "an unknown Parent"
+                  }
+                />
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isMasterAdmin ? (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>All users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="flex flex-col">
+                {allProfiles.map((p) => (
+                  <UserRoleRow key={p.id} userId={p.id} email={p.email} role={p.role} />
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Parent-to-Student assignments</CardTitle>
+              <CardDescription>A Student can have multiple Parents.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AssignmentManager admins={admins} members={members} assignments={assignments} />
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
     </div>
   );
 }

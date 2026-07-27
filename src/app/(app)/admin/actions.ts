@@ -86,3 +86,89 @@ export async function unassignMember(
   revalidatePath("/admin");
   return { error: null };
 }
+
+export async function approveAdmin(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const userId = formData.get("user_id");
+  if (typeof userId !== "string") return { error: "User is required." };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status: "active" })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function rejectAdmin(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const userId = formData.get("user_id");
+  if (typeof userId !== "string") return { error: "User is required." };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status: "rejected" })
+    .eq("id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function approveStudent(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const studentId = formData.get("student_id");
+  const adminId = formData.get("admin_id");
+
+  if (typeof studentId !== "string" || typeof adminId !== "string") {
+    return { error: "Student and requested Parent are required." };
+  }
+
+  const { error: assignError } = await supabase.from("admin_members").insert({
+    admin_id: adminId,
+    member_id: studentId,
+    assigned_by: adminId,
+  });
+  if (assignError) return { error: assignError.message };
+
+  const { error: statusError } = await supabase
+    .from("profiles")
+    .update({ status: "active" })
+    .eq("id", studentId);
+  if (statusError) return { error: statusError.message };
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function rejectStudent(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const studentId = formData.get("student_id");
+  if (typeof studentId !== "string") return { error: "Student is required." };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ status: "rejected" })
+    .eq("id", studentId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin");
+  return { error: null };
+}

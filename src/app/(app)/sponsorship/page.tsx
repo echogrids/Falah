@@ -8,9 +8,16 @@ import {
 } from "@/components/ui/card";
 import { LogTransactionForm } from "@/components/sponsorship/log-transaction-form";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
+import { StudentSelector } from "@/components/layout/student-selector";
+import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
 import type { ModuleAccess } from "@/lib/module-access";
 
-export default async function SponsorshipPage() {
+export default async function SponsorshipPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ student?: string }>;
+}) {
+  const { student } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +25,7 @@ export default async function SponsorshipPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("module_access")
+    .select("role, module_access")
     .eq("id", user?.id)
     .single();
 
@@ -26,16 +33,19 @@ export default async function SponsorshipPage() {
     return <ModuleDisabledNotice title="Sponsorship Tracker" />;
   }
 
+  const students = await getManageableStudents(supabase, user!.id, profile?.role ?? "member");
+  const memberId = resolveTargetMemberId(student, user!.id, students);
+
   const [{ data: totals }, { data: transactions }] = await Promise.all([
     supabase
       .from("sponsorships")
       .select("intended_total, donated_total, pending_total")
-      .eq("member_id", user?.id)
+      .eq("member_id", memberId)
       .maybeSingle(),
     supabase
       .from("sponsorship_transactions")
-      .select("id, type, amount, note, created_at")
-      .eq("member_id", user?.id)
+      .select("id, type, amount, quantity, unit_price, note, created_at")
+      .eq("member_id", memberId)
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
@@ -50,6 +60,12 @@ export default async function SponsorshipPage() {
           Intended, donated, and pending running totals.
         </p>
       </div>
+
+      <StudentSelector
+        students={students}
+        selectedId={memberId === user!.id ? "self" : memberId}
+        selfLabel="Myself"
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -83,7 +99,7 @@ export default async function SponsorshipPage() {
           <CardTitle>Log a transaction</CardTitle>
         </CardHeader>
         <CardContent>
-          <LogTransactionForm />
+          <LogTransactionForm memberId={memberId} />
         </CardContent>
       </Card>
 
@@ -101,7 +117,9 @@ export default async function SponsorshipPage() {
                 >
                   <span className="capitalize">{transaction.type}</span>
                   <span className="text-muted-foreground">
-                    {transaction.note}
+                    {transaction.quantity && transaction.unit_price
+                      ? `${transaction.quantity} × ${transaction.unit_price}`
+                      : transaction.note}
                   </span>
                   <span className="font-medium">{transaction.amount}</span>
                 </li>

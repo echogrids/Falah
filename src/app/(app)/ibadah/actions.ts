@@ -42,6 +42,8 @@ export async function saveIbadahDay(
     return { error: "A date is required." };
   }
 
+  const memberId = (formData.get("member_id") as string) || user.id;
+
   const { data: settings, error: settingsError } = await supabase
     .from("scoring_settings")
     .select("*")
@@ -63,7 +65,7 @@ export async function saveIbadahDay(
       (formData.get(`${prayer}_location`) as PrayerLocation | null) || null;
 
     return {
-      member_id: user.id,
+      member_id: memberId,
       prayer_day: prayerDay,
       prayer,
       status,
@@ -80,7 +82,7 @@ export async function saveIbadahDay(
   ).map((type) => {
     const rakatCount = formData.get(`worship_${type}_rakat`);
     return {
-      member_id: user.id,
+      member_id: memberId,
       prayer_day: prayerDay,
       worship_type: type,
       rakat_count: rakatCount ? Number(rakatCount) : null,
@@ -91,7 +93,7 @@ export async function saveIbadahDay(
   });
 
   const dailyTracker = {
-    member_id: user.id,
+    member_id: memberId,
     prayer_day: prayerDay,
     dhikr_count: Number(formData.get("dhikr_count") ?? 0),
     swalath_count: Number(formData.get("swalath_count") ?? 0),
@@ -110,7 +112,7 @@ export async function saveIbadahDay(
     supabase
       .from("additional_worship_entries")
       .delete()
-      .eq("member_id", user.id)
+      .eq("member_id", memberId)
       .eq("prayer_day", prayerDay),
     supabase
       .from("daily_trackers")

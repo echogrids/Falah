@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { DateNav } from "@/components/ibadah/date-nav";
+import { StudentSelector } from "@/components/layout/student-selector";
+import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
 import {
   IbadahDayForm,
   type PrayerEntryInitial,
@@ -13,9 +15,9 @@ function todayIso() {
 export default async function IbadahPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; student?: string }>;
 }) {
-  const { date } = await searchParams;
+  const { date, student } = await searchParams;
   const prayerDay = date ?? todayIso();
 
   const supabase = await createClient();
@@ -23,22 +25,31 @@ export default async function IbadahPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user?.id)
+    .single();
+
+  const students = await getManageableStudents(supabase, user!.id, profile?.role ?? "member");
+  const memberId = resolveTargetMemberId(student, user!.id, students);
+
   const [{ data: prayerEntries }, { data: worshipEntries }, { data: tracker }] =
     await Promise.all([
       supabase
         .from("prayer_entries")
         .select("prayer, status, congregation, location")
-        .eq("member_id", user?.id)
+        .eq("member_id", memberId)
         .eq("prayer_day", prayerDay),
       supabase
         .from("additional_worship_entries")
         .select("worship_type, rakat_count")
-        .eq("member_id", user?.id)
+        .eq("member_id", memberId)
         .eq("prayer_day", prayerDay),
       supabase
         .from("daily_trackers")
         .select("dhikr_count, swalath_count, quran_pages, fasting_type")
-        .eq("member_id", user?.id)
+        .eq("member_id", memberId)
         .eq("prayer_day", prayerDay)
         .maybeSingle(),
     ]);
@@ -64,14 +75,22 @@ export default async function IbadahPage({
           Ibadah Tracker
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Log your prayers, worship, and daily practice.
+          Log prayers, worship, and daily practice.
         </p>
       </div>
 
-      <DateNav date={prayerDay} />
+      <div className="flex flex-wrap gap-4">
+        <DateNav date={prayerDay} />
+        <StudentSelector
+          students={students}
+          selectedId={memberId === user!.id ? "self" : memberId}
+          selfLabel="Myself"
+        />
+      </div>
 
       <IbadahDayForm
         prayerDay={prayerDay}
+        memberId={memberId}
         prayerEntries={prayerEntryMap}
         worship={worshipMap}
         dailyTracker={{

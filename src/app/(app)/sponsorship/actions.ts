@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log";
 
 export type SponsorshipActionState = {
   error: string | null;
@@ -49,6 +50,14 @@ export async function logSponsorshipTransaction(
   });
 
   if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "log_sponsorship_transaction",
+    targetType: "sponsorship_transaction",
+    targetId: memberId,
+    details: { type, quantity, unit_price: unitPrice, amount: quantity * unitPrice },
+  });
 
   revalidatePath("/sponsorship");
   return { error: null };

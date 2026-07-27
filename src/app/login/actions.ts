@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity-log";
 
 export type LoginState = {
   error: string | null;
@@ -19,11 +20,18 @@ export async function login(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: error.message };
   }
+
+  await logActivity(supabase, {
+    actorId: data.user.id,
+    action: "login",
+    targetType: "auth",
+    targetId: data.user.id,
+  });
 
   redirect("/");
 }

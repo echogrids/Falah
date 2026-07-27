@@ -50,11 +50,13 @@ const initialState: SaveIbadahDayState = { error: null };
 
 export function IbadahDayForm({
   prayerDay,
+  memberId,
   prayerEntries,
   worship,
   dailyTracker,
 }: {
   prayerDay: string;
+  memberId: string;
   prayerEntries: Record<string, PrayerEntryInitial>;
   worship: Record<string, WorshipInitial>;
   dailyTracker: DailyTrackerInitial;
@@ -67,6 +69,7 @@ export function IbadahDayForm({
   return (
     <form action={formAction} className="flex flex-col gap-6">
       <input type="hidden" name="prayer_day" value={prayerDay} />
+      <input type="hidden" name="member_id" value={memberId} />
 
       <Card>
         <CardHeader>

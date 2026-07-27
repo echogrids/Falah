@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,14 +22,18 @@ const TYPE_OPTIONS = [
   { value: "pending", label: "Pending" },
 ] as const;
 
-export function LogTransactionForm() {
+export function LogTransactionForm({ memberId }: { memberId: string }) {
   const [state, formAction, isPending] = useActionState(
     logSponsorshipTransaction,
     sponsorshipInitialState,
   );
+  const [quantity, setQuantity] = useState("");
+  const [unitPrice, setUnitPrice] = useState("");
+  const amount = (Number(quantity) || 0) * (Number(unitPrice) || 0);
 
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="member_id" value={memberId} />
       <div className="flex flex-col gap-2">
         <Label htmlFor="type">Type</Label>
         <Select name="type" defaultValue="intended">
@@ -46,16 +50,38 @@ export function LogTransactionForm() {
         </Select>
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="amount">Amount</Label>
+        <Label htmlFor="quantity">Quantity</Label>
         <Input
-          id="amount"
+          id="quantity"
           type="number"
-          name="amount"
+          name="quantity"
           min={0}
-          step="0.01"
-          className="w-32"
+          step="1"
+          className="w-24"
+          value={quantity}
+          onChange={(event) => setQuantity(event.target.value)}
           required
         />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="unit_price">Price per unit</Label>
+        <Input
+          id="unit_price"
+          type="number"
+          name="unit_price"
+          min={0}
+          step="0.01"
+          className="w-28"
+          value={unitPrice}
+          onChange={(event) => setUnitPrice(event.target.value)}
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label>Amount</Label>
+        <p className="flex h-9 w-28 items-center text-sm font-medium">
+          {amount.toFixed(2)}
+        </p>
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="note">Note</Label>

@@ -18,12 +18,14 @@ import {
 } from "@/app/(app)/qala/actions";
 
 export function QalaPrayerCard({
+  memberId,
   prayerKey,
   label,
   arabic,
   balance,
   canManage,
 }: {
+  memberId: string;
   prayerKey: string;
   label: string;
   arabic: string;
@@ -61,6 +63,7 @@ export function QalaPrayerCard({
       <CardContent className="flex flex-col gap-4">
         {balance ? (
           <form action={completeAction} className="flex items-center gap-3">
+            <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
             <Button
               type="submit"
@@ -77,6 +80,7 @@ export function QalaPrayerCard({
           </form>
         ) : canManage ? (
           <form action={setAction} className="flex items-center gap-3">
+            <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
             <Input
               type="number"
@@ -96,7 +100,7 @@ export function QalaPrayerCard({
           </form>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Ask an Admin to set your starting balance.
+            Ask a Parent to set your starting balance.
           </p>
         )}
 
@@ -105,6 +109,7 @@ export function QalaPrayerCard({
             action={adjustAction}
             className="flex flex-wrap items-center gap-2 border-t border-border pt-4"
           >
+            <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
             <Input
               type="number"

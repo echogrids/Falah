@@ -22,10 +22,11 @@ export async function completeQala(
   if (!user) return { error: "You must be signed in." };
 
   const prayer = formData.get("prayer");
+  const memberId = (formData.get("member_id") as string) || user.id;
   if (typeof prayer !== "string") return { error: "Prayer is required." };
 
   const { error } = await supabase.from("qala_transactions").insert({
-    member_id: user.id,
+    member_id: memberId,
     prayer,
     recorded_by: user.id,
   });
@@ -49,6 +50,7 @@ export async function setQalaBalance(
 
   const prayer = formData.get("prayer");
   const initialBalance = formData.get("initial_balance");
+  const memberId = (formData.get("member_id") as string) || user.id;
   if (typeof prayer !== "string" || typeof initialBalance !== "string") {
     return { error: "Prayer and balance are required." };
   }
@@ -59,7 +61,7 @@ export async function setQalaBalance(
   }
 
   const { error } = await supabase.from("qala_balances").insert({
-    member_id: user.id,
+    member_id: memberId,
     prayer,
     initial_balance: balance,
     current_balance: balance,
@@ -86,6 +88,7 @@ export async function adjustQalaBalance(
   const prayer = formData.get("prayer");
   const delta = formData.get("delta");
   const reason = formData.get("reason");
+  const memberId = (formData.get("member_id") as string) || user.id;
   if (
     typeof prayer !== "string" ||
     typeof delta !== "string" ||
@@ -96,7 +99,7 @@ export async function adjustQalaBalance(
   }
 
   const { error } = await supabase.from("qala_balance_adjustments").insert({
-    member_id: user.id,
+    member_id: memberId,
     prayer,
     delta: Number(delta),
     reason,

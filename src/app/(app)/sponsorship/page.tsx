@@ -7,12 +7,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LogTransactionForm } from "@/components/sponsorship/log-transaction-form";
+import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
+import type { ModuleAccess } from "@/lib/module-access";
 
 export default async function SponsorshipPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("module_access")
+    .eq("id", user?.id)
+    .single();
+
+  if (!(profile?.module_access as ModuleAccess | undefined)?.sponsorship) {
+    return <ModuleDisabledNotice title="Sponsorship Tracker" />;
+  }
 
   const [{ data: totals }, { data: transactions }] = await Promise.all([
     supabase

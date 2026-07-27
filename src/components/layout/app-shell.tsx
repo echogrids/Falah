@@ -2,14 +2,17 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { roleLabel } from "@/lib/roles";
+import type { ModuleAccess } from "@/lib/module-access";
 
 export function AppShell({
   email,
   role,
+  moduleAccess,
   children,
 }: {
   email: string;
   role: string;
+  moduleAccess: ModuleAccess;
   children: React.ReactNode;
 }) {
   return (
@@ -19,7 +22,7 @@ export function AppShell({
           Falah
         </span>
         <div className="mt-8 flex-1">
-          <SidebarNav />
+          <SidebarNav moduleAccess={moduleAccess} />
         </div>
         <div className="flex flex-col gap-3 border-t border-sidebar-border px-4 pt-4">
           <div className="flex flex-col">
@@ -44,7 +47,7 @@ export function AppShell({
           {children}
         </main>
 
-        <BottomNav />
+        <BottomNav moduleAccess={moduleAccess} />
       </div>
     </div>
   );

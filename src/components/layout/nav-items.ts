@@ -8,19 +8,26 @@ import {
   Users,
   Settings,
 } from "lucide-react";
+import type { ModuleAccess } from "@/lib/module-access";
 
 export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  module: keyof ModuleAccess | null;
 };
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/ibadah", label: "Ibadah", icon: Moon },
-  { href: "/qala", label: "Qala", icon: RotateCcw },
-  { href: "/sponsorship", label: "Sponsorship", icon: HeartHandshake },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/admin", label: "Users", icon: Users },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, module: null },
+  { href: "/ibadah", label: "Ibadah", icon: Moon, module: "ibadah" },
+  { href: "/qala", label: "Qala", icon: RotateCcw, module: "qala" },
+  {
+    href: "/sponsorship",
+    label: "Sponsorship",
+    icon: HeartHandshake,
+    module: "sponsorship",
+  },
+  { href: "/reports", label: "Reports", icon: BarChart3, module: "reports" },
+  { href: "/admin", label: "Users", icon: Users, module: null },
+  { href: "/settings", label: "Settings", icon: Settings, module: null },
 ];

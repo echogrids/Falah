@@ -9,20 +9,33 @@ export type LeaderboardEntry = {
 export async function getLeaderboard(
   supabase: SupabaseClient,
   sinceIso: string,
+  memberIds?: string[],
 ): Promise<LeaderboardEntry[]> {
+  if (memberIds && memberIds.length === 0) return [];
+
+  let prayerQuery = supabase
+    .from("prayer_entries")
+    .select("member_id, score")
+    .gte("prayer_day", sinceIso);
+  let worshipQuery = supabase
+    .from("additional_worship_entries")
+    .select("member_id, score")
+    .gte("prayer_day", sinceIso);
+  let trackerQuery = supabase
+    .from("daily_trackers")
+    .select("member_id, score")
+    .gte("prayer_day", sinceIso);
+
+  if (memberIds) {
+    prayerQuery = prayerQuery.in("member_id", memberIds);
+    worshipQuery = worshipQuery.in("member_id", memberIds);
+    trackerQuery = trackerQuery.in("member_id", memberIds);
+  }
+
   const [prayerEntries, worshipEntries, trackers] = await Promise.all([
-    supabase
-      .from("prayer_entries")
-      .select("member_id, score")
-      .gte("prayer_day", sinceIso),
-    supabase
-      .from("additional_worship_entries")
-      .select("member_id, score")
-      .gte("prayer_day", sinceIso),
-    supabase
-      .from("daily_trackers")
-      .select("member_id, score")
-      .gte("prayer_day", sinceIso),
+    prayerQuery,
+    worshipQuery,
+    trackerQuery,
   ]);
 
   const totals = new Map<string, number>();

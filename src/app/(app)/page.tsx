@@ -1,6 +1,18 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PrayerBeads } from "@/components/layout/prayer-beads";
+import { DailyScoreChart } from "@/components/reports/daily-score-chart";
+import { BadgesList } from "@/components/reports/badges-list";
+import { LeaderboardTable } from "@/components/reports/leaderboard-table";
+import { ActivityFeed, type ActivityRow } from "@/components/dashboard/activity-feed";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { StudentProgressCard } from "@/components/dashboard/student-progress-card";
+import { getDailyTotals } from "@/lib/reports/daily-totals";
+import { getBadges } from "@/lib/reports/badges";
+import { getLeaderboard } from "@/lib/reports/leaderboard";
+import { getManageableStudents } from "@/lib/proxy-entry";
+import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
+import { MANDATORY_PRAYERS } from "@/lib/ibadah/constants";
 import {
   Card,
   CardContent,
@@ -9,8 +21,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+const WINDOW_DAYS = 7;
+
+function isoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
 }
 
 export default async function DashboardPage() {
@@ -19,17 +33,159 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const today = todayIso();
-  const { data: prayerEntries } = await supabase
-    .from("prayer_entries")
-    .select("prayer, status")
-    .eq("member_id", user?.id)
-    .eq("prayer_day", today);
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, module_access")
+    .eq("id", user.id)
+    .single();
+
+  const moduleAccess =
+    (profile?.module_access as ModuleAccess | undefined) ?? DEFAULT_MODULE_ACCESS;
+  const role = profile?.role ?? "member";
+  const isAdmin = role === "admin" || role === "master_admin";
+
+  const today = isoDate(new Date());
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(start.getDate() - (WINDOW_DAYS - 1));
+  const startIso = isoDate(start);
+  const endIso = isoDate(end);
+
+  const [
+    { data: prayerEntries },
+    dailyTotals,
+    badges,
+    { data: weekPrayerEntries },
+  ] = await Promise.all([
+    supabase
+      .from("prayer_entries")
+      .select("prayer, status")
+      .eq("member_id", user.id)
+      .eq("prayer_day", today),
+    getDailyTotals(supabase, user.id, WINDOW_DAYS),
+    getBadges(supabase, user.id),
+    supabase
+      .from("prayer_entries")
+      .select("status")
+      .eq("member_id", user.id)
+      .gte("prayer_day", startIso)
+      .lte("prayer_day", endIso),
+  ]);
 
   const statuses: Record<string, string> = {};
   for (const entry of prayerEntries ?? []) {
     statuses[entry.prayer] = entry.status;
   }
+
+  const todayScore = dailyTotals[dailyTotals.length - 1]?.score ?? 0;
+  const weeklyScore = dailyTotals.reduce((sum, day) => sum + day.score, 0);
+  const loggedCount = weekPrayerEntries?.length ?? 0;
+  const onTimeCount =
+    weekPrayerEntries?.filter((entry) => entry.status === "on_time").length ?? 0;
+  const onTimeRate = loggedCount > 0 ? Math.round((onTimeCount / loggedCount) * 100) : 0;
+  const bestStreak = Math.max(0, ...badges.map((badge) => badge.value));
+
+  let qalaOutstanding: number | null = null;
+  if (moduleAccess.qala) {
+    const { data: balances } = await supabase
+      .from("qala_balances")
+      .select("current_balance")
+      .eq("member_id", user.id);
+    qalaOutstanding = (balances ?? []).reduce(
+      (sum, balance) => sum + balance.current_balance,
+      0,
+    );
+  }
+
+  let sponsorshipTotals: {
+    intended_total: number;
+    donated_total: number;
+    pending_total: number;
+  } | null = null;
+  if (moduleAccess.sponsorship) {
+    const { data } = await supabase
+      .from("sponsorships")
+      .select("intended_total, donated_total, pending_total")
+      .eq("member_id", user.id)
+      .maybeSingle();
+    sponsorshipTotals = data ?? {
+      intended_total: 0,
+      donated_total: 0,
+      pending_total: 0,
+    };
+  }
+
+  let studentCards: Array<{
+    id: string;
+    email: string;
+    todayCompleted: number;
+    weeklyScore: number;
+  }> = [];
+  let familyLeaderboard: Awaited<ReturnType<typeof getLeaderboard>> = [];
+  let activityRows: ActivityRow[] = [];
+  let activityEmail = new Map<string, string>();
+
+  if (isAdmin) {
+    const students = await getManageableStudents(supabase, user.id, role);
+    const studentIds = students.map((student) => student.id);
+
+    const [todayRows, weeklyPerStudent] = await Promise.all([
+      studentIds.length > 0
+        ? supabase
+            .from("prayer_entries")
+            .select("member_id, prayer")
+            .in("member_id", studentIds)
+            .eq("prayer_day", today)
+        : Promise.resolve({ data: [] as { member_id: string; prayer: string }[] }),
+      Promise.all(studentIds.map((id) => getDailyTotals(supabase, id, WINDOW_DAYS))),
+    ]);
+
+    const todayCountByStudent = new Map<string, number>();
+    for (const row of todayRows.data ?? []) {
+      todayCountByStudent.set(
+        row.member_id,
+        (todayCountByStudent.get(row.member_id) ?? 0) + 1,
+      );
+    }
+
+    studentCards = students.map((student, index) => ({
+      id: student.id,
+      email: student.email,
+      todayCompleted: todayCountByStudent.get(student.id) ?? 0,
+      weeklyScore: weeklyPerStudent[index].reduce((sum, day) => sum + day.score, 0),
+    }));
+
+    const scopeIds = role === "master_admin" ? undefined : [...studentIds, user.id];
+    familyLeaderboard = await getLeaderboard(supabase, startIso, scopeIds);
+
+    const { data: activityData } = await supabase
+      .from("activity_log")
+      .select("id, actor_id, action, target_type, target_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(8);
+    activityRows = activityData ?? [];
+
+    const activityUserIds = Array.from(
+      new Set(
+        activityRows
+          .flatMap((row) => [row.actor_id, row.target_id])
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    if (activityUserIds.length > 0) {
+      const { data: activityProfiles } = await supabase
+        .from("profiles")
+        .select("id, email")
+        .in("id", activityUserIds);
+      activityEmail = new Map((activityProfiles ?? []).map((p) => [p.id, p.email]));
+    }
+  }
+
+  const studentsCompleteToday = studentCards.filter(
+    (student) => student.todayCompleted >= MANDATORY_PRAYERS.length,
+  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,7 +193,18 @@ export default async function DashboardPage() {
         <h1 className="font-heading text-2xl font-semibold text-foreground">
           Assalamu alaikum
         </h1>
-        <p className="mt-1 text-muted-foreground">Here&apos;s today, so far.</p>
+        <p className="mt-1 text-muted-foreground">
+          {isAdmin
+            ? "Here's today, so far — for you and your family."
+            : "Here's today, so far."}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Today's score" value={todayScore} />
+        <StatCard label={`${WINDOW_DAYS}-day score`} value={weeklyScore} />
+        <StatCard label="On-time rate" value={`${onTimeRate}%`} sub="last 7 days" />
+        <StatCard label="Best streak" value={bestStreak} sub="days" />
       </div>
 
       <Card>
@@ -53,6 +220,175 @@ export default async function DashboardPage() {
           <PrayerBeads statuses={statuses} />
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>This week</CardTitle>
+          <CardDescription>
+            <Link href="/reports" className="underline underline-offset-4">
+              Full reports
+            </Link>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DailyScoreChart data={dailyTotals} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Badges</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <BadgesList badges={badges} />
+        </CardContent>
+      </Card>
+
+      {moduleAccess.qala || moduleAccess.sponsorship ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {moduleAccess.qala ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Qala Tracker</CardTitle>
+                <CardDescription>
+                  <Link href="/qala" className="underline underline-offset-4">
+                    Manage balances
+                  </Link>
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold text-foreground">
+                  {qalaOutstanding ?? 0}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  prayers still outstanding
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+          {moduleAccess.sponsorship ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Sponsorship Tracker</CardTitle>
+                <CardDescription>
+                  <Link href="/sponsorship" className="underline underline-offset-4">
+                    Log a transaction
+                  </Link>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-semibold text-foreground">
+                    {sponsorshipTotals?.intended_total ?? 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Intended</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-foreground">
+                    {sponsorshipTotals?.donated_total ?? 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Donated</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-foreground">
+                    {sponsorshipTotals?.pending_total ?? 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isAdmin ? (
+        <>
+          <div>
+            <h2 className="font-heading text-xl font-semibold text-foreground">
+              Family overview
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              How your Students are doing this week.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard label="Students" value={studentCards.length} />
+            <StatCard
+              label="Complete today"
+              value={`${studentsCompleteToday}/${studentCards.length}`}
+              sub="all 5 Salah logged"
+            />
+            <StatCard
+              label="Avg weekly score"
+              value={
+                studentCards.length > 0
+                  ? Math.round(
+                      studentCards.reduce((sum, s) => sum + s.weeklyScore, 0) /
+                        studentCards.length,
+                    )
+                  : 0
+              }
+            />
+          </div>
+
+          {studentCards.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Students</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                {studentCards.map((student) => (
+                  <StudentProgressCard
+                    key={student.id}
+                    memberId={student.id}
+                    email={student.email}
+                    todayCompleted={student.todayCompleted}
+                    todayTotal={MANDATORY_PRAYERS.length}
+                    weeklyScore={student.weeklyScore}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Students</CardTitle>
+                <CardDescription>
+                  <Link href="/admin" className="underline underline-offset-4">
+                    Add Students in Users
+                  </Link>
+                </CardDescription>
+              </CardHeader>
+              <CardContent />
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Leaderboard</CardTitle>
+              <CardDescription>Last {WINDOW_DAYS} days.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LeaderboardTable entries={familyLeaderboard} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent activity</CardTitle>
+              <CardDescription>
+                <Link href="/admin" className="underline underline-offset-4">
+                  Full activity log
+                </Link>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ActivityFeed rows={activityRows} emailById={activityEmail} />
+            </CardContent>
+          </Card>
+        </>
+      ) : null}
     </div>
   );
 }

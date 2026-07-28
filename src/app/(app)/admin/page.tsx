@@ -13,6 +13,7 @@ import { PendingStudentRow } from "@/components/admin/pending-student-row";
 import { ModuleAccessRow } from "@/components/admin/module-access-row";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { CredentialsTable } from "@/components/admin/credentials-table";
+import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
 
 export default async function AdminPage() {
@@ -205,37 +206,7 @@ export default async function AdminPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {(activityRows ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No activity yet.</p>
-          ) : (
-            <ul className="flex flex-col">
-              {(activityRows ?? []).map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-col gap-0.5 border-b border-border py-2 text-sm last:border-0"
-                >
-                  <span>
-                    <span className="font-medium">
-                      {activityEmail.get(row.actor_id) ?? "Unknown"}
-                    </span>{" "}
-                    {row.action.replaceAll("_", " ")}
-                    {row.target_id ? (
-                      <>
-                        {" "}
-                        for{" "}
-                        <span className="font-medium">
-                          {activityEmail.get(row.target_id) ?? "Unknown"}
-                        </span>
-                      </>
-                    ) : null}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(row.created_at).toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ActivityFeed rows={activityRows ?? []} emailById={activityEmail} />
         </CardContent>
       </Card>
 

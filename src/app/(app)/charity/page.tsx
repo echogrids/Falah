@@ -27,9 +27,12 @@ export default async function CharityPage({
 }) {
   const { student } = await searchParams;
   const supabase = await createClient();
+  // Middleware already validated this request's JWT against Supabase's
+  // Auth server; read the session locally instead of re-validating.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -38,7 +41,7 @@ export default async function CharityPage({
     .single();
 
   if (!(profile?.module_access as ModuleAccess | undefined)?.charity) {
-    return <ModuleDisabledNotice title="Charity Sponsorship" />;
+    return <ModuleDisabledNotice title="Sadaqah" />;
   }
 
   const role = profile?.role ?? "member";
@@ -123,7 +126,7 @@ export default async function CharityPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Charity Sponsorship
+          Sadaqah
         </h1>
         <p className="mt-1 text-muted-foreground">
           Sponsor charity institutions: make an offer, then record payments against it.

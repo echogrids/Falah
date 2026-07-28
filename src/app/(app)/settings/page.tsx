@@ -5,9 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default async function SettingsPage() {
   const supabase = await createClient();
+  // Middleware already validated this request's JWT against Supabase's
+  // Auth server; read the session locally instead of re-validating.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const [{ data: profile }, { data: settings }] = await Promise.all([
     supabase.from("profiles").select("role").eq("id", user?.id).single(),

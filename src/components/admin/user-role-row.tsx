@@ -35,37 +35,39 @@ export function UserRoleRow({
   );
 
   return (
-    <li className="flex items-center justify-between gap-4 border-b border-border py-3 text-sm last:border-0">
+    <li className="flex flex-col gap-2 border-b border-border py-3 text-sm last:border-0 sm:flex-row sm:items-center sm:justify-between">
       <span className="min-w-0 truncate">{email}</span>
-      <form
-        id={`role-form-${userId}`}
-        action={formAction}
-        className="flex items-center gap-2"
-      >
-        <input type="hidden" name="user_id" value={userId} />
-        <Select
-          name="role"
-          defaultValue={role}
-          onValueChange={() => {
-            const form = document.getElementById(
-              `role-form-${userId}`,
-            ) as HTMLFormElement | null;
-            form?.requestSubmit();
-          }}
+      <div className="flex shrink-0 items-center gap-2">
+        <form
+          id={`role-form-${userId}`}
+          action={formAction}
+          className="flex items-center gap-2"
         >
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ROLE_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </form>
-      {children}
+          <input type="hidden" name="user_id" value={userId} />
+          <Select
+            name="role"
+            defaultValue={role}
+            onValueChange={() => {
+              const form = document.getElementById(
+                `role-form-${userId}`,
+              ) as HTMLFormElement | null;
+              form?.requestSubmit();
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </form>
+        {children}
+      </div>
       {state.error ? (
         <span className="text-xs text-destructive">{state.error}</span>
       ) : null}

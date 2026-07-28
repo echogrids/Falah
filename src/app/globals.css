@@ -10,6 +10,59 @@
   background-size: 40px 40px;
 }
 
+/* Same two-square motif as bg-geo-pattern/FalahMark, tiled larger for the
+   login scene's ambient lattice layers. */
+@utility bg-geo-lattice {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cg fill='none' stroke='currentColor' stroke-width='1'%3E%3Crect x='20' y='20' width='40' height='40'/%3E%3Crect x='20' y='20' width='40' height='40' transform='rotate(45 40 40)'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 80px 80px;
+}
+
+@keyframes lattice-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(-1.5%, -1%, 0) rotate(0.6deg); }
+}
+
+@keyframes lattice-drift-reverse {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(1.5%, 1.2%, 0) rotate(-0.5deg); }
+}
+
+@keyframes lantern-pulse {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes crescent-float {
+  0%, 100% { transform: translateY(0) rotate(-12deg); }
+  50% { transform: translateY(-10px) rotate(-8deg); }
+}
+
+@keyframes scene-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@utility animate-lattice-drift {
+  animation: lattice-drift 22s ease-in-out infinite;
+}
+
+@utility animate-lattice-drift-reverse {
+  animation: lattice-drift-reverse 26s ease-in-out infinite;
+}
+
+@utility animate-lantern-pulse {
+  animation: lantern-pulse 5s ease-in-out infinite;
+}
+
+@utility animate-crescent-float {
+  animation: crescent-float 8s ease-in-out infinite;
+}
+
+@utility animate-scene-rise {
+  animation: scene-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -23,18 +23,18 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, module: null, primary: true },
-  { href: "/ibadah", label: "Ibadah", icon: Moon, module: "ibadah", primary: true },
+  { href: "/ibadah", label: "Munājāh", icon: Moon, module: "ibadah", primary: true },
   { href: "/qala", label: "Qala", icon: RotateCcw, module: "qala", primary: true },
   {
     href: "/sponsorship",
-    label: "Sponsorship",
+    label: "Zād",
     icon: HeartHandshake,
     module: "sponsorship",
     primary: true,
   },
   {
     href: "/charity",
-    label: "Charity Sponsorship",
+    label: "Sadaqah",
     icon: Landmark,
     module: "charity",
     primary: false,

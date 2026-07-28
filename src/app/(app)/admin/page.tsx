@@ -14,6 +14,7 @@ import { ModuleAccessRow } from "@/components/admin/module-access-row";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { CredentialsTable } from "@/components/admin/credentials-table";
 import { EditUserSheet } from "@/components/admin/edit-user-sheet";
+import { DeleteUserButton } from "@/components/admin/delete-user-button";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
@@ -21,9 +22,12 @@ import { profileLabel } from "@/lib/profile-label";
 
 export default async function AdminPage() {
   const supabase = await createClient();
+  // Middleware already validated this request's JWT against Supabase's
+  // Auth server; read the session locally instead of re-validating.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -52,11 +56,18 @@ export default async function AdminPage() {
 
   const isMasterAdmin = profile.role === "master_admin";
 
-  const { data: activityRows } = await supabase
-    .from("activity_log")
-    .select("id, actor_id, action, target_type, target_id, details, created_at")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data: activityRows }, { data: pendingStudents }] = await Promise.all([
+    supabase
+      .from("activity_log")
+      .select("id, actor_id, action, target_type, target_id, details, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("profiles")
+      .select("id, email, username, requested_admin_id")
+      .eq("role", "member")
+      .eq("status", "pending"),
+  ]);
 
   const activityUserIds = Array.from(
     new Set(
@@ -66,35 +77,22 @@ export default async function AdminPage() {
     ),
   );
 
-  const { data: activityProfiles } =
-    activityUserIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("id, email, username")
-          .in("id", activityUserIds)
-      : { data: [] };
-
-  const activityEmail = new Map(
-    (activityProfiles ?? []).map((p) => [p.id, profileLabel(p)]),
-  );
-
-  const { data: pendingStudents } = await supabase
-    .from("profiles")
-    .select("id, email, username, requested_admin_id")
-    .eq("role", "member")
-    .eq("status", "pending");
-
   const requestedAdminIds = Array.from(
     new Set((pendingStudents ?? []).map((s) => s.requested_admin_id).filter(Boolean)),
   ) as string[];
 
-  const { data: requestedAdmins } =
+  const [{ data: activityProfiles }, { data: requestedAdmins }] = await Promise.all([
+    activityUserIds.length > 0
+      ? supabase.from("profiles").select("id, email, username").in("id", activityUserIds)
+      : Promise.resolve({ data: [] }),
     requestedAdminIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("id, email, username")
-          .in("id", requestedAdminIds)
-      : { data: [] };
+      ? supabase.from("profiles").select("id, email, username").in("id", requestedAdminIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const activityEmail = new Map(
+    (activityProfiles ?? []).map((p) => [p.id, profileLabel(p)]),
+  );
 
   const requestedAdminEmail = new Map(
     (requestedAdmins ?? []).map((admin) => [admin.id, profileLabel(admin)]),
@@ -338,6 +336,9 @@ export default async function AdminPage() {
                   {allProfiles.map((p) => (
                     <UserRoleRow key={p.id} userId={p.id} email={profileLabel(p)} role={p.role}>
                       <EditUserSheet profile={p} />
+                      {p.id !== user?.id ? (
+                        <DeleteUserButton userId={p.id} label={profileLabel(p)} />
+                      ) : null}
                     </UserRoleRow>
                   ))}
                 </ul>

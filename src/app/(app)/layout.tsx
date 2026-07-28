@@ -16,9 +16,14 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
+  // Middleware already validated this request's JWT against Supabase's
+  // Auth server (see lib/supabase/middleware.ts); a second network round
+  // trip here would just re-check the same thing, so read the session
+  // locally instead of calling getUser() again.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const { data: profile } = await supabase
     .from("profiles")

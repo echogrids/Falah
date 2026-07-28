@@ -34,10 +34,20 @@ export async function getLeaderboard(
     trackerQuery = trackerQuery.in("member_id", memberIds);
   }
 
-  const [prayerEntries, worshipEntries, trackers] = await Promise.all([
+  // admin_members doesn't depend on the score totals below, so fetch it
+  // in the same round instead of waiting — collapses what would otherwise
+  // be a 3-stage sequential waterfall (scores -> profiles -> parent
+  // profiles) down to 2 round trips.
+  let assignmentsQuery = supabase.from("admin_members").select("admin_id, member_id");
+  if (memberIds) {
+    assignmentsQuery = assignmentsQuery.in("member_id", memberIds);
+  }
+
+  const [prayerEntries, worshipEntries, trackers, { data: assignments }] = await Promise.all([
     prayerQuery,
     worshipQuery,
     trackerQuery,
+    assignmentsQuery,
   ]);
 
   const totals = new Map<string, number>();
@@ -55,38 +65,25 @@ export async function getLeaderboard(
 
   const memberIdsWithScores = Array.from(totals.keys());
 
-  const [{ data: profiles }, { data: assignments }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, email, username, first_name, last_name")
-      .in("id", memberIdsWithScores),
-    supabase
-      .from("admin_members")
-      .select("admin_id, member_id")
-      .in("member_id", memberIdsWithScores),
-  ]);
+  const firstParentIdByMember = new Map(
+    (assignments ?? [])
+      .filter((a) => totals.has(a.member_id))
+      .map((a) => [a.member_id, a.admin_id]),
+  );
+  const parentIds = Array.from(new Set(firstParentIdByMember.values()));
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, email, username, first_name, last_name")
+    .in("id", Array.from(new Set([...memberIdsWithScores, ...parentIds])));
 
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-
-  const parentIds = Array.from(new Set((assignments ?? []).map((a) => a.admin_id)));
-  const { data: parentProfiles } =
-    parentIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("id, email, username, first_name, last_name")
-          .in("id", parentIds)
-      : { data: [] };
-  const parentById = new Map((parentProfiles ?? []).map((p) => [p.id, p]));
-
-  const firstParentIdByMember = new Map(
-    (assignments ?? []).map((a) => [a.member_id, a.admin_id]),
-  );
 
   return memberIdsWithScores
     .map((memberId) => {
       const profile = profileById.get(memberId);
       const parentId = firstParentIdByMember.get(memberId);
-      const parent = parentId ? parentById.get(parentId) : undefined;
+      const parent = parentId ? profileById.get(parentId) : undefined;
 
       return {
         memberId,

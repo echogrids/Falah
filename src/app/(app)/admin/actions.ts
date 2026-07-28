@@ -488,3 +488,55 @@ export async function updateUserProfile(
   revalidatePath("/admin");
   return { error: null };
 }
+
+export async function deleteUser(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const { data: actorProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (actorProfile?.role !== "master_admin") {
+    return { error: "Only Master Admin can delete users." };
+  }
+
+  const userId = formData.get("user_id");
+  if (typeof userId !== "string" || !userId) {
+    return { error: "Missing user." };
+  }
+  if (userId === user.id) {
+    return { error: "You can't delete your own account." };
+  }
+
+  const { data: targetProfile } = await supabase
+    .from("profiles")
+    .select("email, username")
+    .eq("id", userId)
+    .single();
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient.auth.admin.deleteUser(userId);
+  if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "delete_user",
+    targetType: "profile",
+    targetId: null,
+    details: {
+      email: targetProfile?.email ?? null,
+      username: targetProfile?.username ?? null,
+    },
+  });
+
+  revalidatePath("/admin");
+  return { error: null };
+}

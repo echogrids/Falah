@@ -13,9 +13,12 @@ export default async function QalaPage({
 }) {
   const { student } = await searchParams;
   const supabase = await createClient();
+  // Middleware already validated this request's JWT against Supabase's
+  // Auth server; read the session locally instead of re-validating.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const { data: profile } = await supabase
     .from("profiles")

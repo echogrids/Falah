@@ -15,6 +15,7 @@ import { getManageableStudents } from "@/lib/proxy-entry";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
 import { MANDATORY_PRAYERS } from "@/lib/ibadah/constants";
 import { formatRs } from "@/lib/format-currency";
+import { profileLabel } from "@/lib/profile-label";
 import {
   Card,
   CardContent,
@@ -31,9 +32,12 @@ function isoDate(date: Date) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  // Middleware already validated this request's JWT against Supabase's
+  // Auth server; read the session locally instead of re-validating.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   if (!user) return null;
 
@@ -89,43 +93,35 @@ export default async function DashboardPage() {
   const onTimeRate = loggedCount > 0 ? Math.round((onTimeCount / loggedCount) * 100) : 0;
   const bestStreak = Math.max(0, ...badges.map((badge) => badge.value));
 
-  let qalaOutstanding: number | null = null;
-  if (moduleAccess.qala) {
-    const { data: balances } = await supabase
-      .from("qala_balances")
-      .select("current_balance")
-      .eq("member_id", user.id);
-    qalaOutstanding = (balances ?? []).reduce(
-      (sum, balance) => sum + balance.current_balance,
-      0,
-    );
-  }
+  const [qalaBalancesResult, sponsorshipResult] = await Promise.all([
+    moduleAccess.qala
+      ? supabase.from("qala_balances").select("current_balance").eq("member_id", user.id)
+      : Promise.resolve({ data: null }),
+    moduleAccess.sponsorship
+      ? supabase
+          .from("sponsorships")
+          .select(
+            "intended_total, donated_total, pending_total, intended_qty, donated_qty, pending_qty",
+          )
+          .eq("member_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
-  let sponsorshipTotals: {
-    intended_total: number;
-    donated_total: number;
-    pending_total: number;
-    intended_qty: number;
-    donated_qty: number;
-    pending_qty: number;
-  } | null = null;
-  if (moduleAccess.sponsorship) {
-    const { data } = await supabase
-      .from("sponsorships")
-      .select(
-        "intended_total, donated_total, pending_total, intended_qty, donated_qty, pending_qty",
-      )
-      .eq("member_id", user.id)
-      .maybeSingle();
-    sponsorshipTotals = data ?? {
-      intended_total: 0,
-      donated_total: 0,
-      pending_total: 0,
-      intended_qty: 0,
-      donated_qty: 0,
-      pending_qty: 0,
-    };
-  }
+  const qalaOutstanding = moduleAccess.qala
+    ? (qalaBalancesResult.data ?? []).reduce((sum, balance) => sum + balance.current_balance, 0)
+    : null;
+
+  const sponsorshipTotals = moduleAccess.sponsorship
+    ? sponsorshipResult.data ?? {
+        intended_total: 0,
+        donated_total: 0,
+        pending_total: 0,
+        intended_qty: 0,
+        donated_qty: 0,
+        pending_qty: 0,
+      }
+    : null;
 
   let studentCards: Array<{
     id: string;
@@ -140,17 +136,25 @@ export default async function DashboardPage() {
   if (isAdmin) {
     const students = await getManageableStudents(supabase, user.id, role);
     const studentIds = students.map((student) => student.id);
+    const scopeIds = role === "master_admin" ? undefined : [...studentIds, user.id];
 
-    const [todayRows, weeklyPerStudent] = await Promise.all([
-      studentIds.length > 0
-        ? supabase
-            .from("prayer_entries")
-            .select("member_id, prayer")
-            .in("member_id", studentIds)
-            .eq("prayer_day", today)
-        : Promise.resolve({ data: [] as { member_id: string; prayer: string }[] }),
-      Promise.all(studentIds.map((id) => getDailyTotals(supabase, id, WINDOW_DAYS))),
-    ]);
+    const [todayRows, weeklyPerStudent, leaderboard, { data: activityData }] =
+      await Promise.all([
+        studentIds.length > 0
+          ? supabase
+              .from("prayer_entries")
+              .select("member_id, prayer")
+              .in("member_id", studentIds)
+              .eq("prayer_day", today)
+          : Promise.resolve({ data: [] as { member_id: string; prayer: string }[] }),
+        Promise.all(studentIds.map((id) => getDailyTotals(supabase, id, WINDOW_DAYS))),
+        getLeaderboard(supabase, startIso, scopeIds),
+        supabase
+          .from("activity_log")
+          .select("id, actor_id, action, target_type, target_id, created_at")
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
 
     const todayCountByStudent = new Map<string, number>();
     for (const row of todayRows.data ?? []) {
@@ -167,14 +171,7 @@ export default async function DashboardPage() {
       weeklyScore: weeklyPerStudent[index].reduce((sum, day) => sum + day.score, 0),
     }));
 
-    const scopeIds = role === "master_admin" ? undefined : [...studentIds, user.id];
-    familyLeaderboard = await getLeaderboard(supabase, startIso, scopeIds);
-
-    const { data: activityData } = await supabase
-      .from("activity_log")
-      .select("id, actor_id, action, target_type, target_id, created_at")
-      .order("created_at", { ascending: false })
-      .limit(8);
+    familyLeaderboard = leaderboard;
     activityRows = activityData ?? [];
 
     const activityUserIds = Array.from(
@@ -187,9 +184,9 @@ export default async function DashboardPage() {
     if (activityUserIds.length > 0) {
       const { data: activityProfiles } = await supabase
         .from("profiles")
-        .select("id, email")
+        .select("id, email, username")
         .in("id", activityUserIds);
-      activityEmail = new Map((activityProfiles ?? []).map((p) => [p.id, p.email]));
+      activityEmail = new Map((activityProfiles ?? []).map((p) => [p.id, profileLabel(p)]));
     }
   }
 
@@ -252,7 +249,7 @@ export default async function DashboardPage() {
           <CardTitle>Today&apos;s prayers</CardTitle>
           <CardDescription>
             <Link href="/ibadah" className="underline underline-offset-4">
-              Log today&apos;s Ibadah
+              Log today&apos;s Munājāh
             </Link>
           </CardDescription>
         </CardHeader>
@@ -309,7 +306,7 @@ export default async function DashboardPage() {
           {moduleAccess.sponsorship ? (
             <Card>
               <CardHeader>
-                <CardTitle>Sponsorship Tracker</CardTitle>
+                <CardTitle>Zād</CardTitle>
                 <CardDescription>
                   <Link href="/sponsorship" className="underline underline-offset-4">
                     Log a transaction

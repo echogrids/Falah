@@ -7,10 +7,10 @@ import { initialActionState } from "@/lib/action-state";
 import type { ModuleAccess } from "@/lib/module-access";
 
 const MODULES: { key: keyof ModuleAccess; label: string }[] = [
-  { key: "ibadah", label: "Ibadah" },
+  { key: "ibadah", label: "Munājāh" },
   { key: "qala", label: "Qala" },
-  { key: "sponsorship", label: "Sponsorship" },
-  { key: "charity", label: "Charity" },
+  { key: "sponsorship", label: "Zād" },
+  { key: "charity", label: "Sadaqah" },
   { key: "reports", label: "Reports" },
 ];
 

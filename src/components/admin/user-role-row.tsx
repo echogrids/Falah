@@ -22,10 +22,12 @@ export function UserRoleRow({
   userId,
   email,
   role,
+  children,
 }: {
   userId: string;
   email: string;
   role: string;
+  children?: React.ReactNode;
 }) {
   const [state, formAction] = useActionState(
     updateUserRole,
@@ -63,6 +65,7 @@ export function UserRoleRow({
           </SelectContent>
         </Select>
       </form>
+      {children}
       {state.error ? (
         <span className="text-xs text-destructive">{state.error}</span>
       ) : null}

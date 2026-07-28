@@ -15,16 +15,18 @@ import type { ScoringSettings, ScoringMilestone } from "@/lib/ibadah/scoring";
 import { updateScoringSettings } from "@/app/(app)/settings/actions";
 import { initialActionState } from "@/lib/action-state";
 
-const BASE_POINT_FIELDS: { key: keyof ScoringSettings; label: string }[] = [
-  { key: "on_time_points", label: "On Time" },
-  { key: "late_points", label: "Late" },
+const BASE_POINT_FIELDS: { key: keyof ScoringSettings; label: string; min?: number }[] = [
+  { key: "on_time_points", label: "On Time", min: 0 },
+  { key: "late_points", label: "Late", min: 0 },
+  // No min: Qala and Missed should be allowed to go negative, so Master
+  // Admin can make skipping or making up prayers a genuine deduction.
   { key: "qala_points", label: "Qala" },
   { key: "missed_points", label: "Missed" },
-  { key: "jamaah_bonus_points", label: "Jama'ah bonus" },
-  { key: "masjid_bonus_points", label: "Masjid bonus" },
-  { key: "dhuha_points", label: "Dhuha" },
-  { key: "tahajjud_points", label: "Tahajjud" },
-  { key: "witr_points", label: "Witr" },
+  { key: "jamaah_bonus_points", label: "Jama'ah bonus", min: 0 },
+  { key: "masjid_bonus_points", label: "Masjid bonus", min: 0 },
+  { key: "dhuha_points", label: "Dhuha", min: 0 },
+  { key: "tahajjud_points", label: "Tahajjud", min: 0 },
+  { key: "witr_points", label: "Witr", min: 0 },
 ];
 
 function MilestoneFields({
@@ -91,7 +93,7 @@ export function ScoringSettingsForm({
                 id={field.key}
                 type="number"
                 name={field.key}
-                min={0}
+                min={field.min}
                 defaultValue={settings[field.key] as number}
               />
             </div>

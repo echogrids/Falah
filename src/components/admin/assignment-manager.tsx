@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/select";
 import { assignMember, unassignMember } from "@/app/(app)/admin/actions";
 import { initialActionState } from "@/lib/action-state";
+import { profileLabel } from "@/lib/profile-label";
 
-type Profile = { id: string; email: string };
+type Profile = { id: string; email: string; username: string | null };
 type Assignment = { admin_id: string; member_id: string };
 
 export function AssignmentManager({
@@ -34,7 +35,7 @@ export function AssignmentManager({
   );
 
   const emailById = new Map(
-    [...admins, ...members].map((profile) => [profile.id, profile.email]),
+    [...admins, ...members].map((profile) => [profile.id, profileLabel(profile)]),
   );
 
   return (
@@ -49,7 +50,7 @@ export function AssignmentManager({
             <SelectContent>
               {admins.map((admin) => (
                 <SelectItem key={admin.id} value={admin.id}>
-                  {admin.email}
+                  {profileLabel(admin)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -64,7 +65,7 @@ export function AssignmentManager({
             <SelectContent>
               {members.map((member) => (
                 <SelectItem key={member.id} value={member.id}>
-                  {member.email}
+                  {profileLabel(member)}
                 </SelectItem>
               ))}
             </SelectContent>

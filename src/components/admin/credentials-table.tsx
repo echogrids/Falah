@@ -1,6 +1,9 @@
+import { profileLabel } from "@/lib/profile-label";
+
 type Credential = {
   id: string;
   email: string;
+  username: string | null;
   plaintext_password: string;
   created_at: string;
 };
@@ -27,7 +30,7 @@ export function CredentialsTable({ credentials }: { credentials: Credential[] })
         <tbody>
           {credentials.map((credential) => (
             <tr key={credential.id} className="border-b border-border last:border-0">
-              <td className="py-2 pr-4">{credential.email}</td>
+              <td className="py-2 pr-4">{profileLabel(credential)}</td>
               <td className="py-2 pr-4 font-mono">{credential.plaintext_password}</td>
               <td className="py-2 text-muted-foreground">
                 {new Date(credential.created_at).toLocaleDateString()}

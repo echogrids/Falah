@@ -1,8 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { displayName } from "@/lib/profile-label";
 
 export type LeaderboardEntry = {
   memberId: string;
-  email: string;
+  name: string;
+  parentName: string | null;
   score: number;
 };
 
@@ -51,18 +53,47 @@ export async function getLeaderboard(
 
   if (totals.size === 0) return [];
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email")
-    .in("id", Array.from(totals.keys()));
+  const memberIdsWithScores = Array.from(totals.keys());
 
-  const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email]));
+  const [{ data: profiles }, { data: assignments }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, email, username, first_name, last_name")
+      .in("id", memberIdsWithScores),
+    supabase
+      .from("admin_members")
+      .select("admin_id, member_id")
+      .in("member_id", memberIdsWithScores),
+  ]);
 
-  return Array.from(totals.entries())
-    .map(([memberId, score]) => ({
-      memberId,
-      email: emailById.get(memberId) ?? "Unknown",
-      score,
-    }))
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const parentIds = Array.from(new Set((assignments ?? []).map((a) => a.admin_id)));
+  const { data: parentProfiles } =
+    parentIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("id, email, username, first_name, last_name")
+          .in("id", parentIds)
+      : { data: [] };
+  const parentById = new Map((parentProfiles ?? []).map((p) => [p.id, p]));
+
+  const firstParentIdByMember = new Map(
+    (assignments ?? []).map((a) => [a.member_id, a.admin_id]),
+  );
+
+  return memberIdsWithScores
+    .map((memberId) => {
+      const profile = profileById.get(memberId);
+      const parentId = firstParentIdByMember.get(memberId);
+      const parent = parentId ? parentById.get(parentId) : undefined;
+
+      return {
+        memberId,
+        name: profile ? displayName(profile) : "Unknown",
+        parentName: parent ? displayName(parent) : null,
+        score: totals.get(memberId)!,
+      };
+    })
     .sort((a, b) => b.score - a.score);
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
+import { placeholderEmail } from "@/lib/placeholder-email";
 
 export type AdminActionState = {
   error: string | null;
@@ -314,16 +315,30 @@ export async function createUserByAdmin(
     return { error: "Only Master Admin can create users directly." };
   }
 
+  const firstName = formData.get("first_name");
+  const lastName = formData.get("last_name");
+  const username = formData.get("username");
   const email = formData.get("email");
+  const mobile = formData.get("mobile");
   const password = formData.get("password");
+  const confirmPassword = formData.get("confirm_password");
   const requestedRole = formData.get("requested_role");
   const requestedAdminId = formData.get("requested_admin_id");
 
-  if (typeof email !== "string" || !email) {
-    return { error: "Email is required." };
+  if (typeof firstName !== "string" || !firstName) {
+    return { error: "First Name is required." };
+  }
+  if (typeof lastName !== "string" || !lastName) {
+    return { error: "Last Name is required." };
+  }
+  if (typeof username !== "string" || !username) {
+    return { error: "Username is required." };
   }
   if (typeof password !== "string" || password.length < 6) {
     return { error: "Password must be at least 6 characters." };
+  }
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match." };
   }
   if (requestedRole !== "admin" && requestedRole !== "member") {
     return { error: "Choose Parent or Student." };
@@ -332,15 +347,28 @@ export async function createUserByAdmin(
     return { error: "Choose which Parent this Student belongs to." };
   }
 
+  const { data: usernameAvailable, error: usernameCheckError } = await supabase.rpc(
+    "is_username_available",
+    { p_username: username },
+  );
+  if (usernameCheckError) return { error: usernameCheckError.message };
+  if (!usernameAvailable) return { error: "That username is already taken." };
+
+  const authEmail = typeof email === "string" && email.trim() ? email.trim() : placeholderEmail(username);
+
   const adminClient = createAdminClient();
   const { data: created, error: createError } =
     await adminClient.auth.admin.createUser({
-      email,
+      email: authEmail,
       password,
       email_confirm: true,
       user_metadata: {
         requested_role: requestedRole,
         requested_admin_id: requestedAdminId || null,
+        first_name: firstName,
+        last_name: lastName,
+        username,
+        mobile: typeof mobile === "string" && mobile ? mobile : null,
       },
     });
 
@@ -369,7 +397,7 @@ export async function createUserByAdmin(
     .from("user_credentials")
     .insert({
       user_id: newUserId,
-      email,
+      email: authEmail,
       plaintext_password: password,
       created_by: user.id,
     });
@@ -381,6 +409,80 @@ export async function createUserByAdmin(
     targetType: "profile",
     targetId: newUserId,
     details: { role: requestedRole },
+  });
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function updateUserProfile(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const { data: actorProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (actorProfile?.role !== "master_admin") {
+    return { error: "Only Master Admin can edit user info." };
+  }
+
+  const userId = formData.get("user_id");
+  const email = formData.get("email");
+  const firstName = formData.get("first_name");
+  const lastName = formData.get("last_name");
+  const username = formData.get("username");
+  const mobile = formData.get("mobile");
+
+  if (typeof userId !== "string" || !userId) {
+    return { error: "Missing user." };
+  }
+
+  const finalUsername = typeof username === "string" && username ? username : null;
+  const providedEmail = typeof email === "string" ? email.trim() : "";
+  const authEmail = providedEmail || (finalUsername ? placeholderEmail(finalUsername) : "");
+
+  if (!authEmail) {
+    return { error: "Provide an Email, or a Username to generate a login address from." };
+  }
+
+  const adminClient = createAdminClient();
+  const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, {
+    email: authEmail,
+    email_confirm: true,
+  });
+  if (emailError) return { error: emailError.message };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      email: authEmail,
+      first_name: typeof firstName === "string" && firstName ? firstName : null,
+      last_name: typeof lastName === "string" && lastName ? lastName : null,
+      username: finalUsername,
+      mobile: typeof mobile === "string" && mobile ? mobile : null,
+    })
+    .eq("id", userId);
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "That username is already taken." };
+    }
+    return { error: error.message };
+  }
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "update_profile",
+    targetType: "profile",
+    targetId: userId,
   });
 
   revalidatePath("/admin");

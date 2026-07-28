@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -14,8 +15,9 @@ import {
 } from "@/components/ui/select";
 import { createUserByAdmin } from "@/app/(app)/admin/actions";
 import { initialActionState } from "@/lib/action-state";
+import { profileLabel } from "@/lib/profile-label";
 
-type AdminOption = { id: string; email: string };
+type AdminOption = { id: string; email: string; username: string | null };
 
 export function CreateUserForm({ admins }: { admins: AdminOption[] }) {
   const [state, formAction, isPending] = useActionState(
@@ -28,15 +30,41 @@ export function CreateUserForm({ admins }: { admins: AdminOption[] }) {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="create_email">Email</Label>
-          <Input id="create_email" name="email" type="email" required />
+          <Label htmlFor="create_first_name">First Name</Label>
+          <Input id="create_first_name" name="first_name" required />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="create_last_name">Last Name</Label>
+          <Input id="create_last_name" name="last_name" required />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="create_username">Username</Label>
+          <Input id="create_username" name="username" required />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="create_email">Email (optional)</Label>
+          <Input id="create_email" name="email" type="email" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="create_mobile">Mobile</Label>
+          <Input id="create_mobile" name="mobile" type="tel" />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="create_password">Password</Label>
-          <Input
+          <PasswordInput
             id="create_password"
             name="password"
-            type="text"
+            autoComplete="new-password"
+            minLength={6}
+            required
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="create_confirm_password">Confirm Password</Label>
+          <PasswordInput
+            id="create_confirm_password"
+            name="confirm_password"
+            autoComplete="new-password"
             minLength={6}
             required
           />
@@ -72,7 +100,7 @@ export function CreateUserForm({ admins }: { admins: AdminOption[] }) {
             <SelectContent>
               {admins.map((admin) => (
                 <SelectItem key={admin.id} value={admin.id}>
-                  {admin.email}
+                  {profileLabel(admin)}
                 </SelectItem>
               ))}
             </SelectContent>

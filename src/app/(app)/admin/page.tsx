@@ -13,8 +13,11 @@ import { PendingStudentRow } from "@/components/admin/pending-student-row";
 import { ModuleAccessRow } from "@/components/admin/module-access-row";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { CredentialsTable } from "@/components/admin/credentials-table";
+import { EditUserSheet } from "@/components/admin/edit-user-sheet";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
+import { profileLabel } from "@/lib/profile-label";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -65,16 +68,19 @@ export default async function AdminPage() {
 
   const { data: activityProfiles } =
     activityUserIds.length > 0
-      ? await supabase.from("profiles").select("id, email").in("id", activityUserIds)
+      ? await supabase
+          .from("profiles")
+          .select("id, email, username")
+          .in("id", activityUserIds)
       : { data: [] };
 
   const activityEmail = new Map(
-    (activityProfiles ?? []).map((p) => [p.id, p.email]),
+    (activityProfiles ?? []).map((p) => [p.id, profileLabel(p)]),
   );
 
   const { data: pendingStudents } = await supabase
     .from("profiles")
-    .select("id, email, requested_admin_id")
+    .select("id, email, username, requested_admin_id")
     .eq("role", "member")
     .eq("status", "pending");
 
@@ -86,27 +92,32 @@ export default async function AdminPage() {
     requestedAdminIds.length > 0
       ? await supabase
           .from("profiles")
-          .select("id, email")
+          .select("id, email, username")
           .in("id", requestedAdminIds)
       : { data: [] };
 
   const requestedAdminEmail = new Map(
-    (requestedAdmins ?? []).map((admin) => [admin.id, admin.email]),
+    (requestedAdmins ?? []).map((admin) => [admin.id, profileLabel(admin)]),
   );
 
-  let pendingAdmins: { id: string; email: string }[] = [];
+  let pendingAdmins: { id: string; email: string; username: string | null }[] = [];
   let allProfiles: {
     id: string;
     email: string;
     role: string;
     module_access: ModuleAccess;
+    first_name: string | null;
+    last_name: string | null;
+    username: string | null;
+    mobile: string | null;
   }[] = [];
-  let admins: { id: string; email: string }[] = [];
-  let members: { id: string; email: string }[] = [];
+  let admins: { id: string; email: string; username: string | null }[] = [];
+  let members: { id: string; email: string; username: string | null }[] = [];
   let assignments: { admin_id: string; member_id: string }[] = [];
   let credentials: {
     id: string;
     email: string;
+    username: string | null;
     plaintext_password: string;
     created_at: string;
   }[] = [];
@@ -120,17 +131,17 @@ export default async function AdminPage() {
     ] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, email")
+        .select("id, email, username")
         .eq("role", "admin")
         .eq("status", "pending"),
       supabase
         .from("profiles")
-        .select("id, email, role, module_access")
+        .select("id, email, role, module_access, first_name, last_name, username, mobile")
         .order("email"),
       supabase.from("admin_members").select("admin_id, member_id"),
       supabase
         .from("user_credentials")
-        .select("id, email, plaintext_password, created_at")
+        .select("id, user_id, email, plaintext_password, created_at")
         .order("created_at", { ascending: false }),
     ]);
     pendingAdmins = pendingAdminRows ?? [];
@@ -138,7 +149,29 @@ export default async function AdminPage() {
     admins = allProfiles.filter((p) => p.role === "admin" || p.role === "master_admin");
     members = allProfiles.filter((p) => p.role === "member");
     assignments = assignmentRows ?? [];
-    credentials = credentialRows ?? [];
+    const usernameByUserId = new Map(allProfiles.map((p) => [p.id, p.username]));
+    credentials = (credentialRows ?? []).map((row) => ({
+      ...row,
+      username: usernameByUserId.get(row.user_id) ?? null,
+    }));
+  }
+
+  let yourStudents: { id: string; email: string; username: string | null }[] = [];
+  if (!isMasterAdmin && profile.role === "admin") {
+    const { data: memberRows } = await supabase
+      .from("admin_members")
+      .select("member_id")
+      .eq("admin_id", user!.id);
+
+    const memberIds = (memberRows ?? []).map((row) => row.member_id);
+    if (memberIds.length > 0) {
+      const { data: studentProfiles } = await supabase
+        .from("profiles")
+        .select("id, email, username")
+        .in("id", memberIds)
+        .order("email");
+      yourStudents = studentProfiles ?? [];
+    }
   }
 
   return (
@@ -152,135 +185,183 @@ export default async function AdminPage() {
         </p>
       </div>
 
-      {isMasterAdmin && pendingAdmins.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Parent approvals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col">
-              {pendingAdmins.map((admin) => (
-                <PendingAdminRow key={admin.id} userId={admin.id} email={admin.email} />
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          {isMasterAdmin ? <TabsTrigger value="all-users">All Users</TabsTrigger> : null}
+          <TabsTrigger value="activity">Activity Log</TabsTrigger>
+        </TabsList>
 
-      {(pendingStudents ?? []).length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Student requests</CardTitle>
-            <CardDescription>
-              {isMasterAdmin
-                ? "All students awaiting approval."
-                : "Students who requested you as their Parent."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="flex flex-col">
-              {(pendingStudents ?? []).map((student) => (
-                <PendingStudentRow
-                  key={student.id}
-                  studentId={student.id}
-                  email={student.email}
-                  requestedAdminId={student.requested_admin_id}
-                  requestedAdminEmail={
-                    requestedAdminEmail.get(student.requested_admin_id) ??
-                    "an unknown Parent"
-                  }
-                />
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
+        <TabsContent value="overview" className="flex flex-col gap-6">
+          {isMasterAdmin && pendingAdmins.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Parent approvals</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="flex flex-col">
+                  {pendingAdmins.map((admin) => (
+                    <PendingAdminRow key={admin.id} userId={admin.id} email={profileLabel(admin)} />
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent activity</CardTitle>
-          <CardDescription>
-            {isMasterAdmin
-              ? "Everything happening in Falah."
-              : "Activity involving you and your assigned Students."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ActivityFeed rows={activityRows ?? []} emailById={activityEmail} />
-        </CardContent>
-      </Card>
+          {(pendingStudents ?? []).length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Student requests</CardTitle>
+                <CardDescription>
+                  {isMasterAdmin
+                    ? "All students awaiting approval."
+                    : "Students who requested you as their Parent."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="flex flex-col">
+                  {(pendingStudents ?? []).map((student) => (
+                    <PendingStudentRow
+                      key={student.id}
+                      studentId={student.id}
+                      email={profileLabel(student)}
+                      requestedAdminId={student.requested_admin_id}
+                      requestedAdminEmail={
+                        requestedAdminEmail.get(student.requested_admin_id) ??
+                        "an unknown Parent"
+                      }
+                    />
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
 
-      {isMasterAdmin ? (
-        <>
+          {!isMasterAdmin ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Students</CardTitle>
+                <CardDescription>Students assigned to you.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {yourStudents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No Students assigned to you yet.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col">
+                    {yourStudents.map((student) => (
+                      <li
+                        key={student.id}
+                        className="border-b border-border py-3 text-sm last:border-0"
+                      >
+                        {profileLabel(student)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {isMasterAdmin ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Create a user</CardTitle>
+                  <CardDescription>
+                    Goes straight to active — no approval step needed.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <CreateUserForm admins={admins} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Created accounts</CardTitle>
+                  <CardDescription>
+                    Usernames and passwords for accounts created here.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <CredentialsTable credentials={credentials} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Module access</CardTitle>
+                  <CardDescription>
+                    Which modules each user can use for themselves.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="flex flex-col">
+                    {allProfiles.map((p) => (
+                      <ModuleAccessRow
+                        key={p.id}
+                        userId={p.id}
+                        email={profileLabel(p)}
+                        moduleAccess={p.module_access ?? DEFAULT_MODULE_ACCESS}
+                      />
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Parent-to-Student assignments</CardTitle>
+                  <CardDescription>A Student can have multiple Parents.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AssignmentManager admins={admins} members={members} assignments={assignments} />
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
+        </TabsContent>
+
+        {isMasterAdmin ? (
+          <TabsContent value="all-users">
+            <Card>
+              <CardHeader>
+                <CardTitle>All users</CardTitle>
+                <CardDescription>
+                  Edit a user&apos;s name, username, email, or mobile.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="flex flex-col">
+                  {allProfiles.map((p) => (
+                    <UserRoleRow key={p.id} userId={p.id} email={profileLabel(p)} role={p.role}>
+                      <EditUserSheet profile={p} />
+                    </UserRoleRow>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
+
+        <TabsContent value="activity">
           <Card>
             <CardHeader>
-              <CardTitle>Create a user</CardTitle>
+              <CardTitle>Recent activity</CardTitle>
               <CardDescription>
-                Goes straight to active — no approval step needed.
+                {isMasterAdmin
+                  ? "Everything happening in Falah."
+                  : "Activity involving you and your assigned Students."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <CreateUserForm admins={admins} />
+              <ActivityFeed rows={activityRows ?? []} emailById={activityEmail} />
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Created accounts</CardTitle>
-              <CardDescription>
-                Usernames and passwords for accounts created here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CredentialsTable credentials={credentials} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>All users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="flex flex-col">
-                {allProfiles.map((p) => (
-                  <UserRoleRow key={p.id} userId={p.id} email={p.email} role={p.role} />
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Module access</CardTitle>
-              <CardDescription>
-                Which modules each user can use for themselves.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ul className="flex flex-col">
-                {allProfiles.map((p) => (
-                  <ModuleAccessRow
-                    key={p.id}
-                    userId={p.id}
-                    email={p.email}
-                    moduleAccess={p.module_access ?? DEFAULT_MODULE_ACCESS}
-                  />
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Parent-to-Student assignments</CardTitle>
-              <CardDescription>A Student can have multiple Parents.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AssignmentManager admins={admins} members={members} assignments={assignments} />
-            </CardContent>
-          </Card>
-        </>
-      ) : null}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

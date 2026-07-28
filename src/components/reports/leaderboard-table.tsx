@@ -18,7 +18,14 @@ export function LeaderboardTable({ entries }: { entries: LeaderboardEntry[] }) {
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
               {index + 1}
             </span>
-            <span className="truncate">{entry.email}</span>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">{entry.name}</span>
+              {index === 0 && entry.parentName ? (
+                <span className="truncate text-xs text-muted-foreground">
+                  Parent: {entry.parentName}
+                </span>
+              ) : null}
+            </span>
           </span>
           <span className="shrink-0 font-medium">{entry.score}</span>
         </li>

@@ -86,7 +86,9 @@ export function OfferCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {remarks ? <p className="text-sm text-muted-foreground">{remarks}</p> : null}
-        <p className="text-xs text-muted-foreground">Offered {formatDateTime(createdAt)}</p>
+        <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+          Offered {formatDateTime(createdAt)}
+        </p>
 
         {payments.length > 0 ? (
           <ul className="flex flex-col gap-1.5 border-t border-border pt-2">
@@ -98,7 +100,9 @@ export function OfferCard({
                 <span className="flex min-w-0 items-start gap-1.5">
                   <Receipt className="mt-0.5 size-3.5 shrink-0" />
                   <span className="min-w-0">
-                    <span className="block">{formatDateTime(payment.created_at)}</span>
+                    <span className="block" suppressHydrationWarning>
+                      {formatDateTime(payment.created_at)}
+                    </span>
                     {payment.remarks ? (
                       <span className="block truncate">{payment.remarks}</span>
                     ) : null}

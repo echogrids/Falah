@@ -14,6 +14,7 @@ import { getLeaderboard } from "@/lib/reports/leaderboard";
 import { getManageableStudents } from "@/lib/proxy-entry";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
 import { MANDATORY_PRAYERS } from "@/lib/ibadah/constants";
+import { formatRs } from "@/lib/format-currency";
 import {
   Card,
   CardContent,
@@ -104,17 +105,25 @@ export default async function DashboardPage() {
     intended_total: number;
     donated_total: number;
     pending_total: number;
+    intended_qty: number;
+    donated_qty: number;
+    pending_qty: number;
   } | null = null;
   if (moduleAccess.sponsorship) {
     const { data } = await supabase
       .from("sponsorships")
-      .select("intended_total, donated_total, pending_total")
+      .select(
+        "intended_total, donated_total, pending_total, intended_qty, donated_qty, pending_qty",
+      )
       .eq("member_id", user.id)
       .maybeSingle();
     sponsorshipTotals = data ?? {
       intended_total: 0,
       donated_total: 0,
       pending_total: 0,
+      intended_qty: 0,
+      donated_qty: 0,
+      pending_qty: 0,
     };
   }
 
@@ -309,22 +318,28 @@ export default async function DashboardPage() {
               </CardHeader>
               <CardContent className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-lg font-semibold text-foreground">
-                    {sponsorshipTotals?.intended_total ?? 0}
+                  <p className="font-sans text-base font-semibold tabular-nums text-foreground">
+                    {formatRs(sponsorshipTotals?.intended_total ?? 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Intended</p>
+                  <p className="text-xs text-muted-foreground">
+                    Intended · {sponsorshipTotals?.intended_qty ?? 0} qty
+                  </p>
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-foreground">
-                    {sponsorshipTotals?.donated_total ?? 0}
+                  <p className="font-sans text-base font-semibold tabular-nums text-foreground">
+                    {formatRs(sponsorshipTotals?.donated_total ?? 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Donated</p>
+                  <p className="text-xs text-muted-foreground">
+                    Donated · {sponsorshipTotals?.donated_qty ?? 0} qty
+                  </p>
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-foreground">
-                    {sponsorshipTotals?.pending_total ?? 0}
+                  <p className="font-sans text-base font-semibold tabular-nums text-foreground">
+                    {formatRs(sponsorshipTotals?.pending_total ?? 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Pending</p>
+                  <p className="text-xs text-muted-foreground">
+                    Pending · {sponsorshipTotals?.pending_qty ?? 0} qty
+                  </p>
                 </div>
               </CardContent>
             </Card>

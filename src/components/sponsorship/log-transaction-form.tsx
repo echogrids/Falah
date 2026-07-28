@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { logSponsorshipTransaction } from "@/app/(app)/sponsorship/actions";
 import { initialActionState } from "@/lib/action-state";
+import { formatRs } from "@/lib/format-currency";
 
 const TYPE_OPTIONS = [
   { value: "intended", label: "Intended" },
@@ -62,7 +63,7 @@ export function LogTransactionForm({ memberId }: { memberId: string }) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="unit_price">Price/unit</Label>
+          <Label htmlFor="unit_price">Price/unit (Rs)</Label>
           <Input
             id="unit_price"
             type="number"
@@ -76,8 +77,8 @@ export function LogTransactionForm({ memberId }: { memberId: string }) {
         </div>
         <div className="flex flex-col gap-2">
           <Label>Amount</Label>
-          <p className="flex h-10 items-center text-sm font-medium">
-            {amount.toFixed(2)}
+          <p className="flex h-10 items-center text-sm font-medium tabular-nums">
+            {formatRs(amount)}
           </p>
         </div>
       </div>

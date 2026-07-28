@@ -241,6 +241,7 @@ export async function updateModuleAccess(
     ibadah: formData.get("ibadah") === "on",
     qala: formData.get("qala") === "on",
     sponsorship: formData.get("sponsorship") === "on",
+    charity: formData.get("charity") === "on",
     reports: formData.get("reports") === "on",
   };
 

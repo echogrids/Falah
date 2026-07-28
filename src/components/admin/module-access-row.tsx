@@ -10,6 +10,7 @@ const MODULES: { key: keyof ModuleAccess; label: string }[] = [
   { key: "ibadah", label: "Ibadah" },
   { key: "qala", label: "Qala" },
   { key: "sponsorship", label: "Sponsorship" },
+  { key: "charity", label: "Charity" },
   { key: "reports", label: "Reports" },
 ];
 

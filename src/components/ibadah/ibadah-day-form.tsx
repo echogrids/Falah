@@ -33,34 +33,65 @@ import {
 import { PRAYER_VISUALS } from "@/lib/ibadah/prayer-visuals";
 import { saveIbadahDay, type SaveIbadahDayState } from "@/app/(app)/ibadah/actions";
 
-const STATUS_ACTIVE_CLASSNAME: Record<string, string> = {
+const STATUS_TINT_CLASSNAME: Record<string, string> = {
   on_time:
-    "has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground",
-  late: "has-[[data-state=checked]]:border-accent has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground",
-  qala: "has-[[data-state=checked]]:border-gold has-[[data-state=checked]]:bg-gold has-[[data-state=checked]]:text-gold-foreground",
+    "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground has-[[data-state=checked]]:shadow-md",
+  late: "border-accent/30 bg-accent/10 text-accent hover:bg-accent/20 has-[[data-state=checked]]:border-accent has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:shadow-md",
+  qala: "border-gold/40 bg-gold/15 text-gold-foreground hover:bg-gold/25 has-[[data-state=checked]]:border-gold has-[[data-state=checked]]:bg-gold has-[[data-state=checked]]:text-gold-foreground has-[[data-state=checked]]:shadow-md",
   missed:
-    "has-[[data-state=checked]]:border-destructive has-[[data-state=checked]]:bg-destructive has-[[data-state=checked]]:text-white",
+    "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 has-[[data-state=checked]]:border-destructive has-[[data-state=checked]]:bg-destructive has-[[data-state=checked]]:text-white has-[[data-state=checked]]:shadow-md",
+};
+
+const CONGREGATION_TINT_CLASSNAME: Record<string, string> = {
+  alone:
+    "border-accent/30 bg-accent/10 text-accent hover:bg-accent/20 has-[[data-state=checked]]:border-accent has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:shadow-md",
+  jamaah:
+    "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground has-[[data-state=checked]]:shadow-md",
 };
 
 function ChoicePill({
   value,
-  activeClassName,
+  tintClassName,
   children,
 }: {
   value: string;
-  activeClassName?: string;
+  tintClassName: string;
   children: React.ReactNode;
 }) {
   return (
     <label
       className={cn(
-        "relative flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm font-medium text-foreground transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
-        activeClassName ??
-          "has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground",
+        "relative flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm font-semibold transition-all duration-150 active:scale-95 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
+        tintClassName,
       )}
     >
       <RadioGroupPrimitive.Item value={value} className="absolute inset-0 opacity-0" />
       {children}
+    </label>
+  );
+}
+
+function CongregationCard({
+  value,
+  icon: Icon,
+  label,
+  tintClassName,
+}: {
+  value: string;
+  icon: typeof User;
+  label: string;
+  tintClassName: string;
+}) {
+  return (
+    <label
+      className={cn(
+        "relative flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 active:scale-95 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
+        tintClassName,
+      )}
+    >
+      <RadioGroupPrimitive.Item value={value} className="absolute inset-0 opacity-0" />
+      <Icon className="size-5" />
+      {label}
     </label>
   );
 }
@@ -150,7 +181,7 @@ export function IbadahDayForm({
                     <ChoicePill
                       key={status.value}
                       value={status.value}
-                      activeClassName={STATUS_ACTIVE_CLASSNAME[status.value]}
+                      tintClassName={STATUS_TINT_CLASSNAME[status.value]}
                     >
                       {status.label}
                     </ChoicePill>
@@ -163,14 +194,13 @@ export function IbadahDayForm({
                     className="grid grid-cols-2 gap-2 sm:w-1/2"
                   >
                     {CONGREGATION_OPTIONS.map((option) => (
-                      <ChoicePill key={option.value} value={option.value}>
-                        {option.value === "alone" ? (
-                          <User className="size-4" />
-                        ) : (
-                          <Users className="size-4" />
-                        )}
-                        {option.label}
-                      </ChoicePill>
+                      <CongregationCard
+                        key={option.value}
+                        value={option.value}
+                        icon={option.value === "alone" ? User : Users}
+                        label={option.label}
+                        tintClassName={CONGREGATION_TINT_CLASSNAME[option.value]}
+                      />
                     ))}
                   </RadioGroup>
                   <Select

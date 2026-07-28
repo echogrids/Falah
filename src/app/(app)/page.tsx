@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PrayerBeads } from "@/components/layout/prayer-beads";
+import { FalahMark } from "@/components/layout/falah-mark";
 import { DailyScoreChart } from "@/components/reports/daily-score-chart";
 import { BadgesList } from "@/components/reports/badges-list";
 import { LeaderboardTable } from "@/components/reports/leaderboard-table";
@@ -187,24 +188,54 @@ export default async function DashboardPage() {
     (student) => student.todayCompleted >= MANDATORY_PRAYERS.length,
   ).length;
 
+  const displayDate = end.toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Assalamu alaikum
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {isAdmin
-            ? "Here's today, so far — for you and your family."
-            : "Here's today, so far."}
-        </p>
+      <div className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-2xl bg-primary px-6 py-8 text-primary-foreground shadow-[var(--shadow-lift)] sm:px-8">
+        <div
+          aria-hidden="true"
+          className="bg-geo-pattern pointer-events-none absolute inset-0 text-primary-foreground opacity-[0.08]"
+        />
+        <div className="relative flex flex-col gap-1.5">
+          <span className="flex items-center gap-2 text-sm font-medium text-primary-foreground/70">
+            <FalahMark className="size-3.5" />
+            {displayDate}
+          </span>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
+            Assalamu alaikum
+          </h1>
+          <p className="text-primary-foreground/80">
+            {isAdmin
+              ? "Here's today, so far — for you and your family."
+              : "Here's today, so far."}
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Today's score" value={todayScore} />
-        <StatCard label={`${WINDOW_DAYS}-day score`} value={weeklyScore} />
-        <StatCard label="On-time rate" value={`${onTimeRate}%`} sub="last 7 days" />
-        <StatCard label="Best streak" value={bestStreak} sub="days" />
+        <StatCard label="Today's score" value={todayScore} accentClassName="bg-primary" />
+        <StatCard
+          label={`${WINDOW_DAYS}-day score`}
+          value={weeklyScore}
+          accentClassName="bg-accent"
+        />
+        <StatCard
+          label="On-time rate"
+          value={`${onTimeRate}%`}
+          sub="last 7 days"
+          accentClassName="bg-gold"
+        />
+        <StatCard
+          label="Best streak"
+          value={bestStreak}
+          sub="days"
+          accentClassName="bg-chart-4"
+        />
       </div>
 
       <Card>
@@ -313,11 +344,16 @@ export default async function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatCard label="Students" value={studentCards.length} />
+            <StatCard
+              label="Students"
+              value={studentCards.length}
+              accentClassName="bg-accent"
+            />
             <StatCard
               label="Complete today"
               value={`${studentsCompleteToday}/${studentCards.length}`}
               sub="all 5 Salah logged"
+              accentClassName="bg-primary"
             />
             <StatCard
               label="Avg weekly score"
@@ -329,6 +365,7 @@ export default async function DashboardPage() {
                     )
                   : 0
               }
+              accentClassName="bg-gold"
             />
           </div>
 

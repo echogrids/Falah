@@ -1,11 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
+import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
+import { User, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -27,7 +30,40 @@ import {
   LOCATION_OPTIONS,
   FASTING_TYPE_OPTIONS,
 } from "@/lib/ibadah/constants";
+import { PRAYER_VISUALS } from "@/lib/ibadah/prayer-visuals";
 import { saveIbadahDay, type SaveIbadahDayState } from "@/app/(app)/ibadah/actions";
+
+const STATUS_ACTIVE_CLASSNAME: Record<string, string> = {
+  on_time:
+    "has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground",
+  late: "has-[[data-state=checked]]:border-accent has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground",
+  qala: "has-[[data-state=checked]]:border-gold has-[[data-state=checked]]:bg-gold has-[[data-state=checked]]:text-gold-foreground",
+  missed:
+    "has-[[data-state=checked]]:border-destructive has-[[data-state=checked]]:bg-destructive has-[[data-state=checked]]:text-white",
+};
+
+function ChoicePill({
+  value,
+  activeClassName,
+  children,
+}: {
+  value: string;
+  activeClassName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      className={cn(
+        "relative flex min-h-11 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-input px-3 py-2 text-sm font-medium text-foreground transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2",
+        activeClassName ??
+          "has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary has-[[data-state=checked]]:text-primary-foreground",
+      )}
+    >
+      <RadioGroupPrimitive.Item value={value} className="absolute inset-0 opacity-0" />
+      {children}
+    </label>
+  );
+}
 
 export type PrayerEntryInitial = {
   status: string;
@@ -78,53 +114,70 @@ export function IbadahDayForm({
         <CardContent className="flex flex-col gap-6">
           {MANDATORY_PRAYERS.map((prayer) => {
             const existing = prayerEntries[prayer.key];
+            const visual = PRAYER_VISUALS[prayer.key];
+            const PrayerIcon = visual?.icon;
             return (
               <div
                 key={prayer.key}
                 className="flex flex-col gap-3 border-b border-border pb-6 last:border-0 last:pb-0"
               >
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium">{prayer.label}</span>
-                  <span className="font-arabic text-sm text-muted-foreground">
-                    {prayer.arabic}
-                  </span>
+                <div className="flex items-center gap-3">
+                  {PrayerIcon ? (
+                    <span
+                      className={cn(
+                        "flex size-10 shrink-0 items-center justify-center rounded-full",
+                        visual.className,
+                      )}
+                    >
+                      <PrayerIcon className="size-5" />
+                    </span>
+                  ) : null}
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-heading text-lg font-semibold text-foreground">
+                      {prayer.label}
+                    </span>
+                    <span className="font-arabic text-sm text-muted-foreground">
+                      {prayer.arabic}
+                    </span>
+                  </div>
                 </div>
                 <RadioGroup
                   name={`${prayer.key}_status`}
                   defaultValue={existing?.status}
-                  className="flex flex-wrap gap-4"
+                  className="grid grid-cols-2 gap-2 sm:grid-cols-4"
                 >
                   {PRAYER_STATUSES.map((status) => (
-                    <label
+                    <ChoicePill
                       key={status.value}
-                      className="flex items-center gap-2 text-sm"
+                      value={status.value}
+                      activeClassName={STATUS_ACTIVE_CLASSNAME[status.value]}
                     >
-                      <RadioGroupItem value={status.value} />
                       {status.label}
-                    </label>
+                    </ChoicePill>
                   ))}
                 </RadioGroup>
-                <div className="grid grid-cols-2 gap-3">
-                  <Select
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <RadioGroup
                     name={`${prayer.key}_congregation`}
                     defaultValue={existing?.congregation ?? undefined}
+                    className="grid grid-cols-2 gap-2 sm:w-1/2"
                   >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Congregation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONGREGATION_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {CONGREGATION_OPTIONS.map((option) => (
+                      <ChoicePill key={option.value} value={option.value}>
+                        {option.value === "alone" ? (
+                          <User className="size-4" />
+                        ) : (
+                          <Users className="size-4" />
+                        )}
+                        {option.label}
+                      </ChoicePill>
+                    ))}
+                  </RadioGroup>
                   <Select
                     name={`${prayer.key}_location`}
                     defaultValue={existing?.location ?? undefined}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full sm:w-1/2">
                       <SelectValue placeholder="Location" />
                     </SelectTrigger>
                     <SelectContent>

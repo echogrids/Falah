@@ -1,3 +1,4 @@
+import { Landmark, HandCoins, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -9,6 +10,11 @@ import {
 import { InstitutionForm } from "@/components/charity/institution-form";
 import { OfferForm, type InstitutionOption } from "@/components/charity/offer-form";
 import { OfferCard, type PaymentEntry } from "@/components/charity/offer-card";
+import {
+  InstitutionCard,
+  type CurrencyTotal,
+  type OutstandingOffer,
+} from "@/components/charity/institution-card";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
 import { StudentSelector } from "@/components/layout/student-selector";
 import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
@@ -36,10 +42,11 @@ export default async function CharityPage({
   }
 
   const role = profile?.role ?? "member";
-  const canManageInstitutions = role === "admin" || role === "master_admin";
+  const canEditInstitution = role === "admin" || role === "master_admin";
 
   const students = await getManageableStudents(supabase, user!.id, role);
   const memberId = resolveTargetMemberId(student, user!.id, students);
+  const canRecordPayment = memberId === user!.id || canEditInstitution;
 
   const [{ data: institutions }, { data: offers }] = await Promise.all([
     supabase
@@ -50,7 +57,7 @@ export default async function CharityPage({
     supabase
       .from("charity_offers")
       .select(
-        "id, amount, currency, remarks, paid_total, status, created_at, charity_institutions(name)",
+        "id, institution_id, amount, currency, remarks, paid_total, status, created_at, charity_institutions(name)",
       )
       .eq("member_id", memberId)
       .order("created_at", { ascending: false }),
@@ -73,13 +80,44 @@ export default async function CharityPage({
     paymentsByOffer.set(payment.offer_id, list);
   }
 
+  // Per institution, per currency (an institution can in principle receive
+  // offers in more than one currency, so totals are never summed across
+  // currencies).
+  const totalsByInstitution = new Map<string, Map<string, CurrencyTotal>>();
+  const outstandingByInstitution = new Map<string, OutstandingOffer[]>();
+
+  for (const offer of offers ?? []) {
+    const currencyMap = totalsByInstitution.get(offer.institution_id) ?? new Map();
+    const existing = currencyMap.get(offer.currency) ?? {
+      currency: offer.currency,
+      offered: 0,
+      paid: 0,
+      pending: 0,
+    };
+    existing.offered += offer.amount;
+    existing.paid += offer.paid_total;
+    existing.pending += offer.amount - offer.paid_total;
+    currencyMap.set(offer.currency, existing);
+    totalsByInstitution.set(offer.institution_id, currencyMap);
+
+    if (offer.status !== "fulfilled" && offer.status !== "cancelled") {
+      const list = outstandingByInstitution.get(offer.institution_id) ?? [];
+      list.push({
+        id: offer.id,
+        amount: offer.amount,
+        currency: offer.currency,
+        paidTotal: offer.paid_total,
+        remarks: offer.remarks,
+      });
+      outstandingByInstitution.set(offer.institution_id, list);
+    }
+  }
+
   const institutionOptions: InstitutionOption[] = (institutions ?? []).map((institution) => ({
     id: institution.id,
     name: institution.name,
     default_currency: institution.default_currency,
   }));
-
-  const canManageOffers = memberId === user!.id || canManageInstitutions;
 
   return (
     <div className="flex flex-col gap-6">
@@ -100,37 +138,55 @@ export default async function CharityPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Institutions</CardTitle>
-          <CardDescription>
-            {canManageInstitutions
-              ? "Add an institution once, then it's available to everyone when making an offer."
-              : "Institutions available to sponsor."}
-          </CardDescription>
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Landmark className="size-4" />
+            </span>
+            <div>
+              <CardTitle>Institutions</CardTitle>
+              <CardDescription>
+                {canEditInstitution
+                  ? "Add an institution once, then it's available to everyone when making an offer."
+                  : "Institutions available to sponsor."}
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          {canManageInstitutions ? <InstitutionForm /> : null}
+          {canEditInstitution ? <InstitutionForm /> : null}
           {institutionOptions.length > 0 ? (
-            <ul className="flex flex-col gap-2 border-t border-border pt-3">
-              {institutionOptions.map((institution) => (
-                <li key={institution.id} className="text-sm">
-                  <span className="font-medium text-foreground">{institution.name}</span>{" "}
-                  <span className="text-muted-foreground">
-                    ({institution.default_currency})
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+              {(institutions ?? []).map((institution) => {
+                const currencyMap = totalsByInstitution.get(institution.id);
+                return (
+                  <InstitutionCard
+                    key={institution.id}
+                    id={institution.id}
+                    name={institution.name}
+                    notes={institution.notes}
+                    defaultCurrency={institution.default_currency}
+                    canEditInstitution={canEditInstitution}
+                    canRecordPayment={canRecordPayment}
+                    totals={currencyMap ? Array.from(currencyMap.values()) : []}
+                    outstandingOffers={outstandingByInstitution.get(institution.id) ?? []}
+                  />
+                );
+              })}
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              No institutions added yet.
-            </p>
+            <p className="text-sm text-muted-foreground">No institutions added yet.</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Make an offer</CardTitle>
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
+              <HandCoins className="size-4" />
+            </span>
+            <CardTitle>Make an offer</CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <OfferForm memberId={memberId} institutions={institutionOptions} />
@@ -138,7 +194,12 @@ export default async function CharityPage({
       </Card>
 
       <div className="flex flex-col gap-3">
-        <h2 className="font-heading text-lg font-semibold text-foreground">Offers</h2>
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gold/20 text-gold-foreground">
+            <ListChecks className="size-4" />
+          </span>
+          <h2 className="font-heading text-lg font-semibold text-foreground">Offers</h2>
+        </div>
         {offers && offers.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {offers.map((offer) => {
@@ -159,7 +220,8 @@ export default async function CharityPage({
                   paidTotal={offer.paid_total}
                   status={offer.status}
                   remarks={offer.remarks}
-                  canManage={canManageOffers}
+                  createdAt={offer.created_at}
+                  canManage={canRecordPayment}
                   payments={paymentsByOffer.get(offer.id) ?? []}
                 />
               );

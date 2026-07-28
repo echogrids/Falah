@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { HandCoins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,6 +95,7 @@ export function OfferForm({
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+          <HandCoins className="size-4" />
           {isPending ? "Saving..." : "Make offer"}
         </Button>
         {state.error ? (

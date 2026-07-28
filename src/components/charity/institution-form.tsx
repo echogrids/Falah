@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ export function InstitutionForm() {
       </datalist>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
+          <Plus className="size-4" />
           {isPending ? "Adding..." : "Add institution"}
         </Button>
         {state.error ? (

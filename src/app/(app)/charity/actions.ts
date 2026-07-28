@@ -53,6 +53,53 @@ export async function createInstitution(
   return { error: null };
 }
 
+export async function updateInstitution(
+  _prevState: CharityActionState,
+  formData: FormData,
+): Promise<CharityActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "You must be signed in." };
+
+  const institutionId = formData.get("institution_id");
+  const name = formData.get("name");
+  const notes = formData.get("notes");
+  const defaultCurrency = formData.get("default_currency");
+
+  if (typeof institutionId !== "string" || !institutionId) {
+    return { error: "Institution is required." };
+  }
+  if (typeof name !== "string" || !name.trim()) {
+    return { error: "Institution name is required." };
+  }
+
+  const { error } = await supabase
+    .from("charity_institutions")
+    .update({
+      name: name.trim(),
+      notes: typeof notes === "string" && notes ? notes : null,
+      default_currency:
+        typeof defaultCurrency === "string" && defaultCurrency ? defaultCurrency : "Rs",
+    })
+    .eq("id", institutionId);
+
+  if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "update_charity_institution",
+    targetType: "charity_institution",
+    targetId: institutionId,
+    details: { name: name.trim() },
+  });
+
+  revalidatePath("/charity");
+  return { error: null };
+}
+
 export async function createCharityOffer(
   _prevState: CharityActionState,
   formData: FormData,

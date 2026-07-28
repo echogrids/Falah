@@ -11,6 +11,7 @@ import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice
 import { StudentSelector } from "@/components/layout/student-selector";
 import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
 import type { ModuleAccess } from "@/lib/module-access";
+import { formatRs } from "@/lib/format-currency";
 
 export default async function SponsorshipPage({
   searchParams,
@@ -39,7 +40,9 @@ export default async function SponsorshipPage({
   const [{ data: totals }, { data: transactions }] = await Promise.all([
     supabase
       .from("sponsorships")
-      .select("intended_total, donated_total, pending_total")
+      .select(
+        "intended_total, donated_total, pending_total, intended_qty, donated_qty, pending_qty",
+      )
       .eq("member_id", memberId)
       .maybeSingle(),
     supabase
@@ -71,25 +74,34 @@ export default async function SponsorshipPage({
         <Card>
           <CardHeader>
             <CardDescription>Intended</CardDescription>
-            <CardTitle className="text-2xl">
-              {totals?.intended_total ?? 0}
+            <CardTitle className="font-sans text-2xl tabular-nums">
+              {formatRs(totals?.intended_total ?? 0)}
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {totals?.intended_qty ?? 0} qty
+            </p>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>Donated</CardDescription>
-            <CardTitle className="text-2xl">
-              {totals?.donated_total ?? 0}
+            <CardTitle className="font-sans text-2xl tabular-nums">
+              {formatRs(totals?.donated_total ?? 0)}
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {totals?.donated_qty ?? 0} qty
+            </p>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>Pending</CardDescription>
-            <CardTitle className="text-2xl">
-              {totals?.pending_total ?? 0}
+            <CardTitle className="font-sans text-2xl tabular-nums">
+              {formatRs(totals?.pending_total ?? 0)}
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {totals?.pending_qty ?? 0} qty
+            </p>
           </CardHeader>
         </Card>
       </div>
@@ -117,11 +129,13 @@ export default async function SponsorshipPage({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="capitalize">{transaction.type}</span>
-                    <span className="font-medium">{transaction.amount}</span>
+                    <span className="font-medium tabular-nums">
+                      {formatRs(transaction.amount)}
+                    </span>
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {transaction.quantity && transaction.unit_price
-                      ? `${transaction.quantity} × ${transaction.unit_price}`
+                      ? `${transaction.quantity} qty × ${formatRs(transaction.unit_price)}`
                       : transaction.note}
                   </span>
                 </li>

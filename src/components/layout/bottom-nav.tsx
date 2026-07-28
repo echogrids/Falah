@@ -27,7 +27,7 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-card/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         <ul className="flex items-stretch justify-between px-1">
           {primaryItems.map((item) => {
             const isActive = pathname === item.href;
@@ -36,11 +36,11 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex min-h-11 flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-medium",
+                    "flex min-h-14 flex-col items-center justify-center gap-1 py-3 text-xs font-medium",
                     isActive ? "text-primary" : "text-muted-foreground",
                   )}
                 >
-                  <item.icon className="size-5" strokeWidth={isActive ? 2.5 : 2} />
+                  <item.icon className="size-6" strokeWidth={isActive ? 2.5 : 2} />
                   {item.label}
                 </Link>
               </li>
@@ -52,12 +52,12 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
                 type="button"
                 onClick={() => setMoreOpen(true)}
                 className={cn(
-                  "flex min-h-11 w-full flex-col items-center justify-center gap-0.5 py-2.5 text-xs font-medium",
+                  "flex min-h-14 w-full flex-col items-center justify-center gap-1 py-3 text-xs font-medium",
                   isSecondaryActive ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 <MoreHorizontal
-                  className="size-5"
+                  className="size-6"
                   strokeWidth={isSecondaryActive ? 2.5 : 2}
                 />
                 More
@@ -68,7 +68,10 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
       </nav>
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="pb-8">
+        <SheetContent
+          side="bottom"
+          className="pb-[calc(2rem+env(safe-area-inset-bottom))]"
+        >
           <SheetHeader>
             <SheetTitle>More</SheetTitle>
           </SheetHeader>

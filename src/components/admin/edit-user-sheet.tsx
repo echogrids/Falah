@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { PencilIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Sheet,
@@ -34,6 +35,16 @@ export function EditUserSheet({ profile }: { profile: EditableProfile }) {
     initialActionState,
   );
   const realEmail = isPlaceholderEmail(profile.email) ? "" : profile.email;
+
+  // Auto-close on success so the New password field (holding a plaintext
+  // value) doesn't linger populated in the DOM after it's been saved.
+  const wasSaving = useRef(false);
+  useEffect(() => {
+    if (wasSaving.current && !isPending && !state.error) {
+      setOpen(false);
+    }
+    wasSaving.current = isPending;
+  }, [isPending, state.error]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -93,6 +104,15 @@ export function EditUserSheet({ profile }: { profile: EditableProfile }) {
               name="mobile"
               type="tel"
               defaultValue={profile.mobile ?? ""}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`new_password-${profile.id}`}>New password</Label>
+            <PasswordInput
+              id={`new_password-${profile.id}`}
+              name="new_password"
+              autoComplete="new-password"
+              placeholder="Leave blank to keep current password"
             />
           </div>
           {state.error ? (

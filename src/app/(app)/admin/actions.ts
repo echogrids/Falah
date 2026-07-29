@@ -440,9 +440,14 @@ export async function updateUserProfile(
   const lastName = formData.get("last_name");
   const username = formData.get("username");
   const mobile = formData.get("mobile");
+  const newPassword = formData.get("new_password");
 
   if (typeof userId !== "string" || !userId) {
     return { error: "Missing user." };
+  }
+
+  if (typeof newPassword === "string" && newPassword && newPassword.length < 6) {
+    return { error: "New password must be at least 6 characters." };
   }
 
   const finalUsername = typeof username === "string" && username ? username : null;
@@ -459,6 +464,32 @@ export async function updateUserProfile(
     email_confirm: true,
   });
   if (emailError) return { error: emailError.message };
+
+  if (typeof newPassword === "string" && newPassword) {
+    const { error: passwordError } = await adminClient.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    });
+    if (passwordError) return { error: passwordError.message };
+
+    const { error: credentialError } = await supabase
+      .from("user_credentials")
+      .upsert(
+        {
+          user_id: userId,
+          email: authEmail,
+          plaintext_password: newPassword,
+          created_by: user.id,
+        },
+        { onConflict: "user_id" },
+      );
+    if (credentialError) return { error: credentialError.message };
+
+    await supabase
+      .from("password_reset_requests")
+      .update({ status: "resolved", resolved_by: user.id, resolved_at: new Date().toISOString() })
+      .eq("profile_id", userId)
+      .eq("status", "pending");
+  }
 
   const { error } = await supabase
     .from("profiles")
@@ -483,6 +514,39 @@ export async function updateUserProfile(
     action: "update_profile",
     targetType: "profile",
     targetId: userId,
+  });
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function dismissPasswordResetRequest(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const requestId = formData.get("request_id");
+  if (typeof requestId !== "string" || !requestId) {
+    return { error: "Missing request." };
+  }
+
+  const { error } = await supabase
+    .from("password_reset_requests")
+    .update({ status: "resolved", resolved_by: user.id, resolved_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "dismiss_password_reset_request",
+    targetType: "password_reset_request",
+    targetId: requestId,
   });
 
   revalidatePath("/admin");

@@ -20,10 +20,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Falah",
   description: "Family Ibadah Tracker",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Falah",
+  },
 };
 
 export const viewport: Viewport = {
   viewportFit: "cover",
+  themeColor: "#336144",
 };
 
 export default function RootLayout({

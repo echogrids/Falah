@@ -10,6 +10,7 @@ import { UserRoleRow } from "@/components/admin/user-role-row";
 import { AssignmentManager } from "@/components/admin/assignment-manager";
 import { PendingAdminRow } from "@/components/admin/pending-admin-row";
 import { PendingStudentRow } from "@/components/admin/pending-student-row";
+import { PasswordResetRequestRow } from "@/components/admin/password-reset-request-row";
 import { ModuleAccessRow } from "@/components/admin/module-access-row";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { CredentialsTable } from "@/components/admin/credentials-table";
@@ -119,6 +120,12 @@ export default async function AdminPage() {
     plaintext_password: string;
     created_at: string;
   }[] = [];
+  let passwordResetRequests: {
+    id: string;
+    identifier: string;
+    profile_id: string | null;
+    created_at: string;
+  }[] = [];
 
   if (isMasterAdmin) {
     const [
@@ -126,6 +133,7 @@ export default async function AdminPage() {
       { data: profiles },
       { data: assignmentRows },
       { data: credentialRows },
+      { data: resetRequestRows },
     ] = await Promise.all([
       supabase
         .from("profiles")
@@ -141,6 +149,11 @@ export default async function AdminPage() {
         .from("user_credentials")
         .select("id, user_id, email, plaintext_password, created_at")
         .order("created_at", { ascending: false }),
+      supabase
+        .from("password_reset_requests")
+        .select("id, identifier, profile_id, created_at")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false }),
     ]);
     pendingAdmins = pendingAdminRows ?? [];
     allProfiles = profiles ?? [];
@@ -152,7 +165,10 @@ export default async function AdminPage() {
       ...row,
       username: usernameByUserId.get(row.user_id) ?? null,
     }));
+    passwordResetRequests = resetRequestRows ?? [];
   }
+
+  const profileById = new Map(allProfiles.map((p) => [p.id, p]));
 
   let yourStudents: { id: string; email: string; username: string | null }[] = [];
   if (!isMasterAdmin && profile.role === "admin") {
@@ -191,6 +207,34 @@ export default async function AdminPage() {
         </TabsList>
 
         <TabsContent value="overview" className="flex flex-col gap-6">
+          {isMasterAdmin && passwordResetRequests.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Password reset requests</CardTitle>
+                <CardDescription>
+                  People who can&apos;t sign in and need a new password set.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="flex flex-col">
+                  {passwordResetRequests.map((request) => (
+                    <PasswordResetRequestRow
+                      key={request.id}
+                      requestId={request.id}
+                      identifier={request.identifier}
+                      createdAt={request.created_at}
+                      profile={
+                        request.profile_id
+                          ? (profileById.get(request.profile_id) ?? null)
+                          : null
+                      }
+                    />
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {isMasterAdmin && pendingAdmins.length > 0 ? (
             <Card>
               <CardHeader>

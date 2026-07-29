@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/activity-log";
 import { placeholderEmail } from "@/lib/placeholder-email";
+import type { ModuleAccess } from "@/lib/module-access";
 
 export type AdminActionState = {
   error: string | null;
@@ -226,25 +227,14 @@ export async function approveStudent(
 }
 
 export async function updateModuleAccess(
-  _prevState: AdminActionState,
-  formData: FormData,
+  userId: string,
+  moduleAccess: ModuleAccess,
 ): Promise<AdminActionState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
-
-  const userId = formData.get("user_id");
-  if (typeof userId !== "string") return { error: "User is required." };
-
-  const moduleAccess = {
-    ibadah: formData.get("ibadah") === "on",
-    qala: formData.get("qala") === "on",
-    sponsorship: formData.get("sponsorship") === "on",
-    charity: formData.get("charity") === "on",
-    reports: formData.get("reports") === "on",
-  };
 
   const { error } = await supabase
     .from("profiles")

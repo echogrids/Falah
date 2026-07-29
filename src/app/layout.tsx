@@ -30,6 +30,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   viewportFit: "cover",
   themeColor: "#336144",
+  // Resize the layout viewport (not just the visual one) when the on-screen
+  // keyboard opens, so fixed elements (bottom nav, sheet footers) and the
+  // browser's own "scroll focused field into view" behavior stay correct
+  // instead of the keyboard just overlaying content.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

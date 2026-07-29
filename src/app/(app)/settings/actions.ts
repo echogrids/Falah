@@ -29,9 +29,19 @@ const MILESTONE_CATEGORIES = [
 
 const MILESTONE_SLOTS = 3;
 
-function num(formData: FormData, key: string): number {
-  const value = formData.get(key);
-  return value ? Number(value) : 0;
+const NEGATIVE_ALLOWED_FIELDS = new Set(["qala_points", "missed_points"]);
+
+function num(formData: FormData, key: string, min?: number): number {
+  const raw = formData.get(key);
+  const parsed = raw ? Number(raw) : 0;
+  const safe = Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+  return min === undefined ? safe : Math.max(min, safe);
+}
+
+function decimalNum(formData: FormData, key: string): number {
+  const raw = formData.get(key);
+  const parsed = raw ? Number(raw) : 0;
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export async function updateScoringSettings(
@@ -48,14 +58,14 @@ export async function updateScoringSettings(
   const update: Record<string, unknown> = { updated_by: user.id };
 
   for (const field of BASE_POINT_FIELDS) {
-    update[field] = num(formData, field);
+    update[field] = num(formData, field, NEGATIVE_ALLOWED_FIELDS.has(field) ? undefined : 0);
   }
 
   for (const category of MILESTONE_CATEGORIES) {
     const milestones = [];
     for (let i = 1; i <= MILESTONE_SLOTS; i++) {
-      const threshold = num(formData, `${category.prefix}_threshold_${i}`);
-      const points = num(formData, `${category.prefix}_points_${i}`);
+      const threshold = num(formData, `${category.prefix}_threshold_${i}`, 0);
+      const points = num(formData, `${category.prefix}_points_${i}`, 0);
       if (threshold > 0) milestones.push({ threshold, points });
     }
     milestones.sort((a, b) => a.threshold - b.threshold);
@@ -64,7 +74,7 @@ export async function updateScoringSettings(
 
   const fastingPoints: Record<string, number> = {};
   for (const option of FASTING_TYPE_OPTIONS) {
-    const points = num(formData, `fasting_${option.value}`);
+    const points = num(formData, `fasting_${option.value}`, 0);
     if (points > 0) fastingPoints[option.value] = points;
   }
   update.fasting_points = fastingPoints;
@@ -83,5 +93,39 @@ export async function updateScoringSettings(
   });
 
   revalidatePath("/settings");
+  return { error: null };
+}
+
+export async function updateSponsorshipSettings(
+  _prevState: SettingsActionState,
+  formData: FormData,
+): Promise<SettingsActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "You must be signed in." };
+
+  const unitPrice = decimalNum(formData, "unit_price");
+  if (!(unitPrice > 0)) {
+    return { error: "Price per meal must be greater than zero." };
+  }
+
+  const { error } = await supabase
+    .from("sponsorship_settings")
+    .update({ unit_price: unitPrice, updated_by: user.id })
+    .eq("id", true);
+
+  if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: "update_sponsorship_settings",
+    targetType: "sponsorship_settings",
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/sponsorship");
   return { error: null };
 }

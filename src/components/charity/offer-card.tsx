@@ -123,10 +123,9 @@ export function OfferCard({
           >
             <input type="hidden" name="offer_id" value={offerId} />
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               name="amount"
-              min={0}
-              step="0.01"
               placeholder={`Amount (${currency})`}
               required
               className="w-full sm:w-36"

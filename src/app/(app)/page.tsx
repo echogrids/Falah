@@ -101,7 +101,7 @@ export default async function DashboardPage() {
       ? supabase
           .from("sponsorships")
           .select(
-            "intended_total, donated_total, pending_total, intended_qty, donated_qty, pending_qty",
+            "intended_total, donated_total, pending_total, intended_meals, donated_meals, pending_meals",
           )
           .eq("member_id", user.id)
           .maybeSingle()
@@ -117,9 +117,9 @@ export default async function DashboardPage() {
         intended_total: 0,
         donated_total: 0,
         pending_total: 0,
-        intended_qty: 0,
-        donated_qty: 0,
-        pending_qty: 0,
+        intended_meals: 0,
+        donated_meals: 0,
+        pending_meals: 0,
       }
     : null;
 
@@ -319,7 +319,7 @@ export default async function DashboardPage() {
                     {formatRs(sponsorshipTotals?.intended_total ?? 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Intended · {sponsorshipTotals?.intended_qty ?? 0} qty
+                    Intended · {sponsorshipTotals?.intended_meals ?? 0} meals
                   </p>
                 </div>
                 <div>
@@ -327,7 +327,7 @@ export default async function DashboardPage() {
                     {formatRs(sponsorshipTotals?.donated_total ?? 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Donated · {sponsorshipTotals?.donated_qty ?? 0} qty
+                    Donated · {sponsorshipTotals?.donated_meals ?? 0} meals
                   </p>
                 </div>
                 <div>
@@ -335,7 +335,7 @@ export default async function DashboardPage() {
                     {formatRs(sponsorshipTotals?.pending_total ?? 0)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Pending · {sponsorshipTotals?.pending_qty ?? 0} qty
+                    Pending · {sponsorshipTotals?.pending_meals ?? 0} meals
                   </p>
                 </div>
               </CardContent>

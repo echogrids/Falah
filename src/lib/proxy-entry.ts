@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type StudentOption = { id: string; email: string };
+export type StudentOption = { id: string; email: string; username: string | null };
 
 export async function getManageableStudents(
   supabase: SupabaseClient,
@@ -10,7 +10,7 @@ export async function getManageableStudents(
   if (role === "master_admin") {
     const { data } = await supabase
       .from("profiles")
-      .select("id, email")
+      .select("id, email, username")
       .eq("role", "member")
       .order("email");
     return data ?? [];
@@ -19,7 +19,7 @@ export async function getManageableStudents(
   if (role === "admin") {
     const { data } = await supabase
       .from("admin_members")
-      .select("member_id, profiles!member_id(id, email)")
+      .select("member_id, profiles!member_id(id, email, username)")
       .eq("admin_id", currentUserId);
 
     return (data ?? [])

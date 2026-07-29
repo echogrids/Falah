@@ -25,6 +25,11 @@ export type SaveIbadahDayState = {
   error: string | null;
 };
 
+function nonNegativeInt(value: FormDataEntryValue | null): number {
+  const parsed = value ? Number(value) : 0;
+  return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
+}
+
 export async function saveIbadahDay(
   _prevState: SaveIbadahDayState,
   formData: FormData,
@@ -86,7 +91,7 @@ export async function saveIbadahDay(
       member_id: memberId,
       prayer_day: prayerDay,
       worship_type: type,
-      rakat_count: rakatCount ? Number(rakatCount) : null,
+      rakat_count: rakatCount ? nonNegativeInt(rakatCount) : null,
       score: additionalWorshipScore(type, scoring),
       created_by: user.id,
       updated_by: user.id,
@@ -96,9 +101,9 @@ export async function saveIbadahDay(
   const dailyTracker = {
     member_id: memberId,
     prayer_day: prayerDay,
-    dhikr_count: Number(formData.get("dhikr_count") ?? 0),
-    swalath_count: Number(formData.get("swalath_count") ?? 0),
-    quran_pages: Number(formData.get("quran_pages") ?? 0),
+    dhikr_count: nonNegativeInt(formData.get("dhikr_count")),
+    swalath_count: nonNegativeInt(formData.get("swalath_count")),
+    quran_pages: nonNegativeInt(formData.get("quran_pages")),
     fasting_type: (formData.get("fasting_type") as string) || null,
     created_by: user.id,
     updated_by: user.id,

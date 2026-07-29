@@ -174,10 +174,9 @@ export function InstitutionCard({
             </Select>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 name="amount"
-                min={0}
-                step="0.01"
                 placeholder="Amount"
                 required
                 className="w-full sm:w-32"

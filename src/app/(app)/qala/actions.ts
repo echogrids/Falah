@@ -112,10 +112,15 @@ export async function adjustQalaBalance(
     return { error: "Prayer, delta, and a reason are required." };
   }
 
+  const deltaValue = Number(delta);
+  if (!Number.isInteger(deltaValue)) {
+    return { error: "Adjustment must be a whole number." };
+  }
+
   const { error } = await supabase.from("qala_balance_adjustments").insert({
     member_id: memberId,
     prayer,
-    delta: Number(delta),
+    delta: deltaValue,
     reason,
     adjusted_by: user.id,
   });
@@ -127,7 +132,7 @@ export async function adjustQalaBalance(
     action: "adjust_qala_balance",
     targetType: "qala_balance",
     targetId: memberId,
-    details: { prayer, delta: Number(delta), reason },
+    details: { prayer, delta: deltaValue, reason },
   });
 
   revalidatePath("/qala");

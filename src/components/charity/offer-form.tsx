@@ -71,7 +71,7 @@ export function OfferForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="amount">Amount</Label>
-          <Input id="amount" type="number" name="amount" min={0} step="0.01" required />
+          <Input id="amount" type="text" inputMode="decimal" name="amount" required />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="currency">Currency</Label>

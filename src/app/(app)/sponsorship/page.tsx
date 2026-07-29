@@ -40,20 +40,21 @@ export default async function SponsorshipPage({
   const students = await getManageableStudents(supabase, user!.id, profile?.role ?? "member");
   const memberId = resolveTargetMemberId(student, user!.id, students);
 
-  const [{ data: totals }, { data: transactions }] = await Promise.all([
+  const [{ data: totals }, { data: transactions }, { data: settings }] = await Promise.all([
     supabase
       .from("sponsorships")
       .select(
-        "intended_total, donated_total, pending_total, intended_qty, donated_qty, pending_qty",
+        "intended_total, donated_total, pending_total, intended_meals, donated_meals, pending_meals",
       )
       .eq("member_id", memberId)
       .maybeSingle(),
     supabase
       .from("sponsorship_transactions")
-      .select("id, type, amount, quantity, unit_price, note, created_at")
+      .select("id, type, amount, meals, unit_price, note, created_at")
       .eq("member_id", memberId)
       .order("created_at", { ascending: false })
       .limit(20),
+    supabase.from("sponsorship_settings").select("unit_price").single(),
   ]);
 
   return (
@@ -81,7 +82,7 @@ export default async function SponsorshipPage({
               {formatRs(totals?.intended_total ?? 0)}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              {totals?.intended_qty ?? 0} qty
+              {totals?.intended_meals ?? 0} meals
             </p>
           </CardHeader>
         </Card>
@@ -92,7 +93,7 @@ export default async function SponsorshipPage({
               {formatRs(totals?.donated_total ?? 0)}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              {totals?.donated_qty ?? 0} qty
+              {totals?.donated_meals ?? 0} meals
             </p>
           </CardHeader>
         </Card>
@@ -103,7 +104,7 @@ export default async function SponsorshipPage({
               {formatRs(totals?.pending_total ?? 0)}
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              {totals?.pending_qty ?? 0} qty
+              {totals?.pending_meals ?? 0} meals
             </p>
           </CardHeader>
         </Card>
@@ -114,7 +115,7 @@ export default async function SponsorshipPage({
           <CardTitle>Log a transaction</CardTitle>
         </CardHeader>
         <CardContent>
-          <LogTransactionForm memberId={memberId} />
+          <LogTransactionForm memberId={memberId} unitPrice={settings?.unit_price ?? 0} />
         </CardContent>
       </Card>
 
@@ -137,8 +138,8 @@ export default async function SponsorshipPage({
                     </span>
                   </div>
                   <span className="text-xs text-muted-foreground">
-                    {transaction.quantity && transaction.unit_price
-                      ? `${transaction.quantity} qty × ${formatRs(transaction.unit_price)}`
+                    {transaction.meals && transaction.unit_price
+                      ? `${transaction.meals} meals × ${formatRs(transaction.unit_price)}`
                       : transaction.note}
                   </span>
                 </li>

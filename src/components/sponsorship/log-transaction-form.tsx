@@ -21,14 +21,19 @@ const TYPE_OPTIONS = [
   { value: "pending", label: "Pending" },
 ] as const;
 
-export function LogTransactionForm({ memberId }: { memberId: string }) {
+export function LogTransactionForm({
+  memberId,
+  unitPrice,
+}: {
+  memberId: string;
+  unitPrice: number;
+}) {
   const [state, formAction, isPending] = useActionState(
     logSponsorshipTransaction,
     initialActionState,
   );
-  const [quantity, setQuantity] = useState("");
-  const [unitPrice, setUnitPrice] = useState("");
-  const amount = (Number(quantity) || 0) * (Number(unitPrice) || 0);
+  const [meals, setMeals] = useState("");
+  const amount = (Number(meals) || 0) * unitPrice;
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -50,30 +55,23 @@ export function LogTransactionForm({ memberId }: { memberId: string }) {
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="quantity">Quantity</Label>
+          <Label htmlFor="meals">Meals</Label>
           <Input
-            id="quantity"
-            type="number"
-            name="quantity"
-            min={0}
-            step="1"
-            value={quantity}
-            onChange={(event) => setQuantity(event.target.value)}
+            id="meals"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            name="meals"
+            value={meals}
+            onChange={(event) => setMeals(event.target.value.replace(/[^0-9]/g, ""))}
             required
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="unit_price">Price/unit (Rs)</Label>
-          <Input
-            id="unit_price"
-            type="number"
-            name="unit_price"
-            min={0}
-            step="0.01"
-            value={unitPrice}
-            onChange={(event) => setUnitPrice(event.target.value)}
-            required
-          />
+          <Label>Price/meal</Label>
+          <p className="flex h-10 items-center text-sm text-muted-foreground tabular-nums">
+            {formatRs(unitPrice)}
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Label>Amount</Label>

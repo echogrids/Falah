@@ -90,7 +90,7 @@ export function SignupForm({ admins }: { admins: AdminOption[] }) {
         <div className="flex flex-col gap-2">
           <Label htmlFor="requested_admin_id">Your Parent</Label>
           <Select name="requested_admin_id">
-            <SelectTrigger id="requested_admin_id">
+            <SelectTrigger id="requested_admin_id" className="w-full">
               <SelectValue placeholder="Choose your Parent" />
             </SelectTrigger>
             <SelectContent>

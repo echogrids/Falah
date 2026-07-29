@@ -83,9 +83,10 @@ export function QalaPrayerCard({
             <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
             <Input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="initial_balance"
-              min={0}
               placeholder="Outstanding count"
               className="w-full sm:w-40"
             />
@@ -111,6 +112,8 @@ export function QalaPrayerCard({
           >
             <input type="hidden" name="member_id" value={memberId} />
             <input type="hidden" name="prayer" value={prayerKey} />
+            {/* type="number" (not inputMode="numeric") because this value can be
+                negative and the on-screen numeric keypad has no minus key. */}
             <Input
               type="number"
               name="delta"

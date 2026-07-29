@@ -20,8 +20,7 @@ export async function logSponsorshipTransaction(
   if (!user) return { error: "You must be signed in." };
 
   const type = formData.get("type");
-  const quantity = Number(formData.get("quantity"));
-  const unitPrice = Number(formData.get("unit_price"));
+  const meals = Number(formData.get("meals"));
   const note = formData.get("note");
   const memberId = (formData.get("member_id") as string) || user.id;
 
@@ -29,19 +28,26 @@ export async function logSponsorshipTransaction(
     return { error: "A valid type is required." };
   }
 
-  if (!(quantity > 0)) {
-    return { error: "Quantity must be greater than zero." };
+  if (!Number.isInteger(meals) || meals <= 0) {
+    return { error: "Meals must be a whole number greater than zero." };
   }
+
+  const { data: settings } = await supabase
+    .from("sponsorship_settings")
+    .select("unit_price")
+    .single();
+  const unitPrice = settings?.unit_price ?? 0;
+
   if (!(unitPrice > 0)) {
-    return { error: "Price per unit must be greater than zero." };
+    return { error: "Set the price per meal in Settings before logging." };
   }
 
   const { error } = await supabase.from("sponsorship_transactions").insert({
     member_id: memberId,
     type,
-    quantity,
+    meals,
     unit_price: unitPrice,
-    amount: quantity * unitPrice,
+    amount: meals * unitPrice,
     note: typeof note === "string" && note ? note : null,
     recorded_by: user.id,
   });
@@ -53,7 +59,7 @@ export async function logSponsorshipTransaction(
     action: "log_sponsorship_transaction",
     targetType: "sponsorship_transaction",
     targetId: memberId,
-    details: { type, quantity, unit_price: unitPrice, amount: quantity * unitPrice },
+    details: { type, meals, unit_price: unitPrice, amount: meals * unitPrice },
   });
 
   revalidatePath("/sponsorship");

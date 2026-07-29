@@ -187,7 +187,7 @@ export function IbadahDayForm({
                     </ChoicePill>
                   ))}
                 </RadioGroup>
-                <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <RadioGroup
                     name={`${prayer.key}_congregation`}
                     defaultValue={existing?.congregation ?? undefined}
@@ -245,10 +245,11 @@ export function IbadahDayForm({
                   </span>
                 </label>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   name={`worship_${item.key}_rakat`}
                   placeholder="Rakat"
-                  min={0}
                   defaultValue={existing?.rakat_count ?? undefined}
                   className="w-24"
                 />
@@ -267,9 +268,10 @@ export function IbadahDayForm({
             <Label htmlFor="dhikr_count">Dhikr count</Label>
             <Input
               id="dhikr_count"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="dhikr_count"
-              min={0}
               defaultValue={dailyTracker.dhikr_count}
             />
           </div>
@@ -277,9 +279,10 @@ export function IbadahDayForm({
             <Label htmlFor="swalath_count">Swalath count</Label>
             <Input
               id="swalath_count"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="swalath_count"
-              min={0}
               defaultValue={dailyTracker.swalath_count}
             />
           </div>
@@ -287,9 +290,10 @@ export function IbadahDayForm({
             <Label htmlFor="quran_pages">Quran pages read</Label>
             <Input
               id="quran_pages"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="quran_pages"
-              min={0}
               defaultValue={dailyTracker.quran_pages}
             />
           </div>

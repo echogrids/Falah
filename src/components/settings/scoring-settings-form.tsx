@@ -46,19 +46,21 @@ function MilestoneFields({
         {slots.map((slot) => (
           <div key={slot} className="flex items-center gap-2">
             <Input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name={`${prefix}_threshold_${slot + 1}`}
               placeholder="Threshold"
-              min={0}
               defaultValue={milestones[slot]?.threshold}
               className="w-28"
             />
             <span className="text-sm text-muted-foreground">→</span>
             <Input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name={`${prefix}_points_${slot + 1}`}
               placeholder="Points"
-              min={0}
               defaultValue={milestones[slot]?.points}
               className="w-24"
             />
@@ -89,13 +91,26 @@ export function ScoringSettingsForm({
           {BASE_POINT_FIELDS.map((field) => (
             <div key={field.key} className="flex flex-col gap-2">
               <Label htmlFor={field.key}>{field.label}</Label>
-              <Input
-                id={field.key}
-                type="number"
-                name={field.key}
-                min={field.min}
-                defaultValue={settings[field.key] as number}
-              />
+              {field.min === undefined ? (
+                // No min: this field allows negative values (see field list
+                // above), and the on-screen numeric keypad has no minus key,
+                // so it needs the full keyboard via type="number".
+                <Input
+                  id={field.key}
+                  type="number"
+                  name={field.key}
+                  defaultValue={settings[field.key] as number}
+                />
+              ) : (
+                <Input
+                  id={field.key}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  name={field.key}
+                  defaultValue={settings[field.key] as number}
+                />
+              )}
             </div>
           ))}
         </CardContent>
@@ -134,9 +149,10 @@ export function ScoringSettingsForm({
               <Label htmlFor={`fasting_${option.value}`}>{option.label}</Label>
               <Input
                 id={`fasting_${option.value}`}
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 name={`fasting_${option.value}`}
-                min={0}
                 defaultValue={settings.fasting_points[option.value]}
               />
             </div>

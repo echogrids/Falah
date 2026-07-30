@@ -1,12 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import { PrayerBeads } from "@/components/layout/prayer-beads";
-import { FalahMark } from "@/components/layout/falah-mark";
-import { DateHeader } from "@/components/dashboard/date-header";
+import { GreetingCard } from "@/components/home/greeting-card";
+import { TodaysProgress } from "@/components/home/todays-progress";
+import { TodaysReminder } from "@/components/home/todays-reminder";
+import { FeaturedBadgeCard } from "@/components/home/featured-badge-card";
+import { RecentActivity } from "@/components/home/recent-activity";
 import { ModuleActionCard } from "@/components/home/module-action-card";
+import { getBadges } from "@/lib/reports/badges";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
-import { displayName } from "@/lib/profile-label";
 import { Moon, RotateCcw, HeartHandshake, Landmark } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/format-currency";
 
 function isoDate(date: Date) {
@@ -71,10 +72,9 @@ export default async function HomePage() {
 
   const moduleAccess =
     (profile?.module_access as ModuleAccess | undefined) ?? DEFAULT_MODULE_ACCESS;
-  const greetingName = profile?.first_name || (profile ? displayName(profile) : "");
 
   const today = isoDate(new Date());
-  const [{ data: prayerEntries }, { data: charityOffers }] = await Promise.all([
+  const [{ data: prayerEntries }, { data: charityOffers }, badges] = await Promise.all([
     supabase
       .from("prayer_entries")
       .select("prayer, status")
@@ -86,6 +86,7 @@ export default async function HomePage() {
           .select("amount, currency, paid_total, status")
           .eq("member_id", user.id)
       : Promise.resolve({ data: null }),
+    getBadges(supabase, user.id),
   ]);
 
   const statuses: Record<string, string> = {};
@@ -117,54 +118,57 @@ export default async function HomePage() {
 
   const visibleTiles = ACTION_TILES.filter((tile) => moduleAccess[tile.module]);
 
+  const featuredBadge =
+    badges.find((badge) => badge.earned) ??
+    badges.reduce((best, badge) => (badge.value > best.value ? badge : best), badges[0]) ??
+    null;
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="relative overflow-hidden rounded-t-[2.5rem] rounded-b-2xl bg-primary px-6 py-8 text-primary-foreground shadow-[var(--shadow-lift)] sm:px-8">
-        <div
-          aria-hidden="true"
-          className="bg-geo-pattern pointer-events-none absolute inset-0 text-primary-foreground opacity-[0.08]"
-        />
-        <div className="relative flex flex-col gap-1.5">
-          <span className="flex items-center gap-2">
-            <FalahMark className="size-3.5 shrink-0 text-primary-foreground/70" />
-            <DateHeader />
-          </span>
-          <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-            Assalamu alaikum{greetingName ? `, ${greetingName}` : ""}
-          </h1>
-          <p className="text-primary-foreground/80">
-            What would you like to log today?
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-7">
+      <GreetingCard firstName={profile?.first_name ?? undefined} />
+
+      <TodaysProgress statuses={statuses} />
 
       {visibleTiles.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          {visibleTiles.map((tile) => (
-            <ModuleActionCard
-              key={tile.href}
-              href={tile.href}
-              label={tile.label}
-              description={tile.description}
-              icon={tile.icon}
-              badgeClassName={tile.badgeClassName}
-              iconClassName={tile.iconClassName}
-              statusBadge={statusBadgeByModule[tile.module]}
-            />
-          ))}
-        </div>
+        <section className="flex flex-col gap-3">
+          <h2 className="px-1 font-heading text-lg font-semibold text-foreground">
+            Quick Actions
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {visibleTiles.map((tile) => (
+              <ModuleActionCard
+                key={tile.href}
+                href={tile.href}
+                label={tile.label}
+                description={tile.description}
+                icon={tile.icon}
+                badgeClassName={tile.badgeClassName}
+                iconClassName={tile.iconClassName}
+                statusBadge={statusBadgeByModule[tile.module]}
+              />
+            ))}
+          </div>
+        </section>
       ) : null}
 
-      {moduleAccess.ibadah ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Today&apos;s prayers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <PrayerBeads statuses={statuses} />
-          </CardContent>
-        </Card>
-      ) : null}
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 font-heading text-lg font-semibold text-foreground">
+          Today&apos;s Reminder
+        </h2>
+        <TodaysReminder />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 font-heading text-lg font-semibold text-foreground">Badges</h2>
+        <FeaturedBadgeCard badge={featuredBadge} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 font-heading text-lg font-semibold text-foreground">
+          Recent Activity
+        </h2>
+        <RecentActivity />
+      </section>
     </div>
   );
 }

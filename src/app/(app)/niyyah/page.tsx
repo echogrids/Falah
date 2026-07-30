@@ -91,7 +91,7 @@ export default async function NiyyahPage({
           <Link
             href={newHref}
             aria-label="Add Niyyah"
-            className="fixed right-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-2 rounded-full bg-primary py-3 pr-5 pl-4 text-sm font-medium text-primary-foreground shadow-[var(--shadow-lift)] transition-transform duration-150 active:scale-95 md:right-8 md:bottom-8"
+            className="fixed right-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-20 flex items-center gap-2 rounded-full bg-primary py-3 pr-5 pl-4 text-sm font-medium text-primary-foreground shadow-[var(--shadow-lift)] transition-transform duration-150 active:scale-95 md:right-8 md:bottom-8"
           >
             <Plus className="size-4.5" />
             Add Niyyah

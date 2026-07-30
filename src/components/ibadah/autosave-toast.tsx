@@ -22,7 +22,7 @@ export function AutosaveToast({
       role="status"
       aria-live="polite"
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-30 flex justify-center px-4 transition-all duration-300 md:bottom-8",
+        "pointer-events-none fixed inset-x-0 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-30 flex justify-center px-4 transition-all duration-300 md:bottom-8",
         message ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
       )}
     >

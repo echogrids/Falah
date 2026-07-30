@@ -7,12 +7,12 @@ import { roleLabel } from "@/lib/roles";
 import type { ModuleAccess } from "@/lib/module-access";
 
 export function AppShell({
-  email,
+  displayName,
   role,
   moduleAccess,
   children,
 }: {
-  email: string;
+  displayName: string;
   role: string;
   moduleAccess: ModuleAccess;
   children: React.ReactNode;
@@ -34,7 +34,7 @@ export function AppShell({
         <div className="flex flex-col gap-3 border-t border-sidebar-border px-4 pt-4">
           <div className="flex flex-col">
             <span className="truncate text-sm font-medium text-sidebar-foreground">
-              {email}
+              {displayName}
             </span>
             <span className="text-xs text-muted-foreground">
               {roleLabel(role)}

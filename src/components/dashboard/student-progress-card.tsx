@@ -2,13 +2,13 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export function StudentProgressCard({
-  email,
+  label,
   todayCompleted,
   todayTotal,
   weeklyScore,
   memberId,
 }: {
-  email: string;
+  label: string;
   todayCompleted: number;
   todayTotal: number;
   weeklyScore: number;
@@ -23,7 +23,7 @@ export function StudentProgressCard({
     >
       <div className="flex items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-medium text-foreground">
-          {email}
+          {label}
         </span>
         <span className="shrink-0 text-xs text-muted-foreground">
           {weeklyScore} pts / 7d

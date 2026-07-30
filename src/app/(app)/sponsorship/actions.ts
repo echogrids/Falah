@@ -24,7 +24,7 @@ export async function logSponsorshipTransaction(
   const note = formData.get("note");
   const memberId = (formData.get("member_id") as string) || user.id;
 
-  if (type !== "intended" && type !== "donated" && type !== "pending") {
+  if (type !== "intended" && type !== "donated") {
     return { error: "A valid type is required." };
   }
 

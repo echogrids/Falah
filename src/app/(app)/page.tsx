@@ -2,10 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PrayerBeads } from "@/components/layout/prayer-beads";
 import { FalahMark } from "@/components/layout/falah-mark";
-import { DailyScoreChart } from "@/components/reports/daily-score-chart";
+import { DateHeader } from "@/components/dashboard/date-header";
 import { BadgesList } from "@/components/reports/badges-list";
 import { LeaderboardTable } from "@/components/reports/leaderboard-table";
-import { ActivityFeed, type ActivityRow } from "@/components/dashboard/activity-feed";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { StudentProgressCard } from "@/components/dashboard/student-progress-card";
 import { getDailyTotals } from "@/lib/reports/daily-totals";
@@ -15,7 +14,9 @@ import { getManageableStudents } from "@/lib/proxy-entry";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
 import { MANDATORY_PRAYERS } from "@/lib/ibadah/constants";
 import { formatRs } from "@/lib/format-currency";
-import { profileLabel } from "@/lib/profile-label";
+import { profileLabel, displayName } from "@/lib/profile-label";
+import type { ScoringSettings } from "@/lib/ibadah/scoring";
+import { UtensilsCrossed, Wallet } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -28,6 +29,17 @@ const WINDOW_DAYS = 7;
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function maxDailySalahScore(scoring: ScoringSettings): number {
+  const bestStatus = Math.max(
+    scoring.on_time_points,
+    scoring.late_points,
+    scoring.qala_points,
+    0,
+  );
+  const bonuses = Math.max(0, scoring.jamaah_bonus_points) + Math.max(0, scoring.masjid_bonus_points);
+  return MANDATORY_PRAYERS.length * (bestStatus + bonuses);
 }
 
 export default async function DashboardPage() {
@@ -43,7 +55,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, module_access")
+    .select("role, module_access, first_name, last_name, username, email")
     .eq("id", user.id)
     .single();
 
@@ -51,6 +63,7 @@ export default async function DashboardPage() {
     (profile?.module_access as ModuleAccess | undefined) ?? DEFAULT_MODULE_ACCESS;
   const role = profile?.role ?? "member";
   const isAdmin = role === "admin" || role === "master_admin";
+  const greetingName = profile?.first_name || (profile ? displayName(profile) : "");
 
   const today = isoDate(new Date());
   const end = new Date();
@@ -64,6 +77,7 @@ export default async function DashboardPage() {
     dailyTotals,
     badges,
     { data: weekPrayerEntries },
+    { data: scoringSettings },
   ] = await Promise.all([
     supabase
       .from("prayer_entries")
@@ -78,6 +92,7 @@ export default async function DashboardPage() {
       .eq("member_id", user.id)
       .gte("prayer_day", startIso)
       .lte("prayer_day", endIso),
+    supabase.from("scoring_settings").select("*").single(),
   ]);
 
   const statuses: Record<string, string> = {};
@@ -93,18 +108,22 @@ export default async function DashboardPage() {
   const onTimeRate = loggedCount > 0 ? Math.round((onTimeCount / loggedCount) * 100) : 0;
   const bestStreak = Math.max(0, ...badges.map((badge) => badge.value));
 
-  const [qalaBalancesResult, sponsorshipResult] = await Promise.all([
+  const dailyMax = scoringSettings ? maxDailySalahScore(scoringSettings as ScoringSettings) : 0;
+  const weeklyMax = dailyMax * WINDOW_DAYS;
+
+  const [qalaBalancesResult, sponsorshipResult, sponsorshipSettingsResult] = await Promise.all([
     moduleAccess.qala
       ? supabase.from("qala_balances").select("current_balance").eq("member_id", user.id)
       : Promise.resolve({ data: null }),
     moduleAccess.sponsorship
       ? supabase
           .from("sponsorships")
-          .select(
-            "intended_total, donated_total, pending_total, intended_meals, donated_meals, pending_meals",
-          )
+          .select("intended_total, donated_total, intended_meals, donated_meals")
           .eq("member_id", user.id)
           .maybeSingle()
+      : Promise.resolve({ data: null }),
+    moduleAccess.sponsorship
+      ? supabase.from("sponsorship_settings").select("unit_price").single()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -116,45 +135,40 @@ export default async function DashboardPage() {
     ? sponsorshipResult.data ?? {
         intended_total: 0,
         donated_total: 0,
-        pending_total: 0,
         intended_meals: 0,
         donated_meals: 0,
-        pending_meals: 0,
       }
     : null;
+  const sponsorshipUnitPrice = sponsorshipSettingsResult.data?.unit_price ?? 0;
+  const sponsorshipPendingMeals = sponsorshipTotals
+    ? Math.max(0, sponsorshipTotals.intended_meals - sponsorshipTotals.donated_meals)
+    : 0;
+  const sponsorshipPendingAmount = sponsorshipPendingMeals * sponsorshipUnitPrice;
 
   let studentCards: Array<{
     id: string;
-    email: string;
+    label: string;
     todayCompleted: number;
     weeklyScore: number;
   }> = [];
   let familyLeaderboard: Awaited<ReturnType<typeof getLeaderboard>> = [];
-  let activityRows: ActivityRow[] = [];
-  let activityEmail = new Map<string, string>();
 
   if (isAdmin) {
     const students = await getManageableStudents(supabase, user.id, role);
     const studentIds = students.map((student) => student.id);
     const scopeIds = role === "master_admin" ? undefined : [...studentIds, user.id];
 
-    const [todayRows, weeklyPerStudent, leaderboard, { data: activityData }] =
-      await Promise.all([
-        studentIds.length > 0
-          ? supabase
-              .from("prayer_entries")
-              .select("member_id, prayer")
-              .in("member_id", studentIds)
-              .eq("prayer_day", today)
-          : Promise.resolve({ data: [] as { member_id: string; prayer: string }[] }),
-        Promise.all(studentIds.map((id) => getDailyTotals(supabase, id, WINDOW_DAYS))),
-        getLeaderboard(supabase, startIso, scopeIds),
-        supabase
-          .from("activity_log")
-          .select("id, actor_id, action, target_type, target_id, created_at")
-          .order("created_at", { ascending: false })
-          .limit(8),
-      ]);
+    const [todayRows, weeklyPerStudent, leaderboard] = await Promise.all([
+      studentIds.length > 0
+        ? supabase
+            .from("prayer_entries")
+            .select("member_id, prayer")
+            .in("member_id", studentIds)
+            .eq("prayer_day", today)
+        : Promise.resolve({ data: [] as { member_id: string; prayer: string }[] }),
+      Promise.all(studentIds.map((id) => getDailyTotals(supabase, id, WINDOW_DAYS))),
+      getLeaderboard(supabase, startIso, scopeIds),
+    ]);
 
     const todayCountByStudent = new Map<string, number>();
     for (const row of todayRows.data ?? []) {
@@ -166,39 +180,17 @@ export default async function DashboardPage() {
 
     studentCards = students.map((student, index) => ({
       id: student.id,
-      email: student.email,
+      label: profileLabel(student),
       todayCompleted: todayCountByStudent.get(student.id) ?? 0,
       weeklyScore: weeklyPerStudent[index].reduce((sum, day) => sum + day.score, 0),
     }));
 
     familyLeaderboard = leaderboard;
-    activityRows = activityData ?? [];
-
-    const activityUserIds = Array.from(
-      new Set(
-        activityRows
-          .flatMap((row) => [row.actor_id, row.target_id])
-          .filter((id): id is string => Boolean(id)),
-      ),
-    );
-    if (activityUserIds.length > 0) {
-      const { data: activityProfiles } = await supabase
-        .from("profiles")
-        .select("id, email, username")
-        .in("id", activityUserIds);
-      activityEmail = new Map((activityProfiles ?? []).map((p) => [p.id, profileLabel(p)]));
-    }
   }
 
   const studentsCompleteToday = studentCards.filter(
     (student) => student.todayCompleted >= MANDATORY_PRAYERS.length,
   ).length;
-
-  const displayDate = end.toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -208,12 +200,12 @@ export default async function DashboardPage() {
           className="bg-geo-pattern pointer-events-none absolute inset-0 text-primary-foreground opacity-[0.08]"
         />
         <div className="relative flex flex-col gap-1.5">
-          <span className="flex items-center gap-2 text-sm font-medium text-primary-foreground/70">
-            <FalahMark className="size-3.5" />
-            {displayDate}
+          <span className="flex items-center gap-2">
+            <FalahMark className="size-3.5 shrink-0 text-primary-foreground/70" />
+            <DateHeader />
           </span>
           <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-            Assalamu alaikum
+            Assalamu alaikum{greetingName ? `, ${greetingName}` : ""}
           </h1>
           <p className="text-primary-foreground/80">
             {isAdmin
@@ -224,10 +216,14 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Today's score" value={todayScore} accentClassName="bg-primary" />
+        <StatCard
+          label="Today's score"
+          value={dailyMax > 0 ? `${todayScore} / ${dailyMax}` : todayScore}
+          accentClassName="bg-primary"
+        />
         <StatCard
           label={`${WINDOW_DAYS}-day score`}
-          value={weeklyScore}
+          value={weeklyMax > 0 ? `${weeklyScore} / ${weeklyMax}` : weeklyScore}
           accentClassName="bg-accent"
         />
         <StatCard
@@ -255,20 +251,6 @@ export default async function DashboardPage() {
         </CardHeader>
         <CardContent>
           <PrayerBeads statuses={statuses} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>This week</CardTitle>
-          <CardDescription>
-            <Link href="/reports" className="underline underline-offset-4">
-              Full reports
-            </Link>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DailyScoreChart data={dailyTotals} />
         </CardContent>
       </Card>
 
@@ -314,28 +296,38 @@ export default async function DashboardPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-3 gap-2 text-center">
+                <div className={sponsorshipPendingMeals > 0 ? "rounded-lg bg-destructive/10 py-1" : ""}>
+                  <p
+                    className={`flex items-center justify-center gap-1 font-sans text-base font-semibold tabular-nums ${sponsorshipPendingMeals > 0 ? "text-destructive" : "text-foreground"}`}
+                  >
+                    <Wallet className="size-3.5" />
+                    {formatRs(sponsorshipPendingAmount)}
+                  </p>
+                  <p
+                    className={`flex items-center justify-center gap-1 text-xs ${sponsorshipPendingMeals > 0 ? "text-destructive/80" : "text-muted-foreground"}`}
+                  >
+                    <UtensilsCrossed className="size-3" />
+                    Pending · {sponsorshipPendingMeals}
+                  </p>
+                </div>
                 <div>
-                  <p className="font-sans text-base font-semibold tabular-nums text-foreground">
+                  <p className="flex items-center justify-center gap-1 font-sans text-base font-semibold tabular-nums text-foreground">
+                    <Wallet className="size-3.5" />
                     {formatRs(sponsorshipTotals?.intended_total ?? 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Intended · {sponsorshipTotals?.intended_meals ?? 0} meals
+                  <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                    <UtensilsCrossed className="size-3" />
+                    Intended · {sponsorshipTotals?.intended_meals ?? 0}
                   </p>
                 </div>
                 <div>
-                  <p className="font-sans text-base font-semibold tabular-nums text-foreground">
+                  <p className="flex items-center justify-center gap-1 font-sans text-base font-semibold tabular-nums text-foreground">
+                    <Wallet className="size-3.5" />
                     {formatRs(sponsorshipTotals?.donated_total ?? 0)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Donated · {sponsorshipTotals?.donated_meals ?? 0} meals
-                  </p>
-                </div>
-                <div>
-                  <p className="font-sans text-base font-semibold tabular-nums text-foreground">
-                    {formatRs(sponsorshipTotals?.pending_total ?? 0)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Pending · {sponsorshipTotals?.pending_meals ?? 0} meals
+                  <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                    <UtensilsCrossed className="size-3" />
+                    Donated · {sponsorshipTotals?.donated_meals ?? 0}
                   </p>
                 </div>
               </CardContent>
@@ -391,7 +383,7 @@ export default async function DashboardPage() {
                   <StudentProgressCard
                     key={student.id}
                     memberId={student.id}
-                    email={student.email}
+                    label={student.label}
                     todayCompleted={student.todayCompleted}
                     todayTotal={MANDATORY_PRAYERS.length}
                     weeklyScore={student.weeklyScore}
@@ -420,20 +412,6 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent>
               <LeaderboardTable entries={familyLeaderboard} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent activity</CardTitle>
-              <CardDescription>
-                <Link href="/admin" className="underline underline-offset-4">
-                  Full activity log
-                </Link>
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActivityFeed rows={activityRows} emailById={activityEmail} />
             </CardContent>
           </Card>
         </>

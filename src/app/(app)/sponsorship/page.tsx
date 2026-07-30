@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { UtensilsCrossed, Wallet, AlertTriangle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -7,11 +8,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LogTransactionForm } from "@/components/sponsorship/log-transaction-form";
+import { SponsorshipSettingsForm } from "@/components/settings/sponsorship-settings-form";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
 import { StudentSelector } from "@/components/layout/student-selector";
 import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
 import type { ModuleAccess } from "@/lib/module-access";
 import { formatRs } from "@/lib/format-currency";
+import { cn } from "@/lib/utils";
 
 export default async function SponsorshipPage({
   searchParams,
@@ -43,9 +46,7 @@ export default async function SponsorshipPage({
   const [{ data: totals }, { data: transactions }, { data: settings }] = await Promise.all([
     supabase
       .from("sponsorships")
-      .select(
-        "intended_total, donated_total, pending_total, intended_meals, donated_meals, pending_meals",
-      )
+      .select("intended_total, donated_total, intended_meals, donated_meals")
       .eq("member_id", memberId)
       .maybeSingle(),
     supabase
@@ -56,6 +57,15 @@ export default async function SponsorshipPage({
       .limit(20),
     supabase.from("sponsorship_settings").select("unit_price").single(),
   ]);
+
+  const unitPrice = settings?.unit_price ?? 0;
+  const intendedMeals = totals?.intended_meals ?? 0;
+  const donatedMeals = totals?.donated_meals ?? 0;
+  // Pending isn't its own logged category anymore — it's always whatever's
+  // left, priced at today's rate. Donated keeps whatever rate applied when
+  // it was actually given.
+  const pendingMeals = Math.max(0, intendedMeals - donatedMeals);
+  const pendingAmount = pendingMeals * unitPrice;
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,36 +85,65 @@ export default async function SponsorshipPage({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
+        <Card
+          className={cn(
+            pendingMeals > 0 &&
+              "border-2 border-destructive/40 bg-destructive/5 shadow-[0_0_0_1px_var(--destructive)_inset]",
+          )}
+        >
+          <CardHeader>
+            <CardDescription
+              className={cn(
+                "flex items-center gap-1.5",
+                pendingMeals > 0 && "text-destructive",
+              )}
+            >
+              {pendingMeals > 0 ? <AlertTriangle className="size-3.5" /> : null}
+              Pending
+            </CardDescription>
+            <CardTitle
+              className={cn(
+                "flex items-center gap-1.5 font-sans text-2xl tabular-nums",
+                pendingMeals > 0 && "text-destructive",
+              )}
+            >
+              <Wallet className="size-4.5" />
+              {formatRs(pendingAmount)}
+            </CardTitle>
+            <p
+              className={cn(
+                "flex items-center gap-1 text-xs",
+                pendingMeals > 0 ? "text-destructive/80" : "text-muted-foreground",
+              )}
+            >
+              <UtensilsCrossed className="size-3" />
+              {pendingMeals} meals
+            </p>
+          </CardHeader>
+        </Card>
         <Card>
           <CardHeader>
             <CardDescription>Intended</CardDescription>
-            <CardTitle className="font-sans text-2xl tabular-nums">
+            <CardTitle className="flex items-center gap-1.5 font-sans text-2xl tabular-nums">
+              <Wallet className="size-4.5 text-muted-foreground" />
               {formatRs(totals?.intended_total ?? 0)}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {totals?.intended_meals ?? 0} meals
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <UtensilsCrossed className="size-3" />
+              {intendedMeals} meals
             </p>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader>
             <CardDescription>Donated</CardDescription>
-            <CardTitle className="font-sans text-2xl tabular-nums">
+            <CardTitle className="flex items-center gap-1.5 font-sans text-2xl tabular-nums">
+              <Wallet className="size-4.5 text-muted-foreground" />
               {formatRs(totals?.donated_total ?? 0)}
             </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {totals?.donated_meals ?? 0} meals
-            </p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Pending</CardDescription>
-            <CardTitle className="font-sans text-2xl tabular-nums">
-              {formatRs(totals?.pending_total ?? 0)}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {totals?.pending_meals ?? 0} meals
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <UtensilsCrossed className="size-3" />
+              {donatedMeals} meals
             </p>
           </CardHeader>
         </Card>
@@ -115,9 +154,13 @@ export default async function SponsorshipPage({
           <CardTitle>Log a transaction</CardTitle>
         </CardHeader>
         <CardContent>
-          <LogTransactionForm memberId={memberId} unitPrice={settings?.unit_price ?? 0} />
+          <LogTransactionForm memberId={memberId} unitPrice={unitPrice} />
         </CardContent>
       </Card>
+
+      {profile?.role === "master_admin" ? (
+        <SponsorshipSettingsForm unitPrice={unitPrice} />
+      ) : null}
 
       <Card>
         <CardHeader>

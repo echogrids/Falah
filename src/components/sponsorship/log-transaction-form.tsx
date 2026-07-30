@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { UtensilsCrossed, Wallet, Clock, HandCoins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,9 +17,8 @@ import { initialActionState } from "@/lib/action-state";
 import { formatRs } from "@/lib/format-currency";
 
 const TYPE_OPTIONS = [
-  { value: "intended", label: "Intended" },
-  { value: "donated", label: "Donated" },
-  { value: "pending", label: "Pending" },
+  { value: "intended", label: "Intended", icon: Clock },
+  { value: "donated", label: "Donated", icon: HandCoins },
 ] as const;
 
 export function LogTransactionForm({
@@ -48,6 +48,7 @@ export function LogTransactionForm({
             <SelectContent>
               {TYPE_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
+                  <option.icon className="size-3.5" />
                   {option.label}
                 </SelectItem>
               ))}
@@ -55,7 +56,10 @@ export function LogTransactionForm({
           </Select>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="meals">Meals</Label>
+          <Label htmlFor="meals" className="flex items-center gap-1.5">
+            <UtensilsCrossed className="size-3.5 text-muted-foreground" />
+            Meals
+          </Label>
           <Input
             id="meals"
             type="text"
@@ -74,7 +78,10 @@ export function LogTransactionForm({
           </p>
         </div>
         <div className="flex flex-col gap-2">
-          <Label>Amount</Label>
+          <Label className="flex items-center gap-1.5">
+            <Wallet className="size-3.5 text-muted-foreground" />
+            Amount
+          </Label>
           <p className="flex h-10 items-center text-sm font-medium tabular-nums">
             {formatRs(amount)}
           </p>

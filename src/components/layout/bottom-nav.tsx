@@ -36,7 +36,7 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex min-h-14 flex-col items-center justify-center gap-1 py-3 text-xs font-medium",
+                    "flex min-h-14 flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-transform duration-150 active:scale-90",
                     isActive ? "text-primary" : "text-muted-foreground",
                   )}
                 >
@@ -52,7 +52,7 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
                 type="button"
                 onClick={() => setMoreOpen(true)}
                 className={cn(
-                  "flex min-h-14 w-full flex-col items-center justify-center gap-1 py-3 text-xs font-medium",
+                  "flex min-h-14 w-full flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-transform duration-150 active:scale-90",
                   isSecondaryActive ? "text-primary" : "text-muted-foreground",
                 )}
               >
@@ -84,7 +84,7 @@ export function BottomNav({ moduleAccess }: { moduleAccess: ModuleAccess }) {
                     href={item.href}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex min-h-12 items-center gap-3 rounded-xl px-3 text-base font-medium",
+                      "flex min-h-12 items-center gap-3 rounded-xl px-3 text-base font-medium transition-transform duration-150 active:scale-95",
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : "text-foreground hover:bg-muted",

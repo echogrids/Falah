@@ -58,11 +58,13 @@ export default async function AdminPage() {
   const isMasterAdmin = profile.role === "master_admin";
 
   const [{ data: activityRows }, { data: pendingStudents }] = await Promise.all([
-    supabase
-      .from("activity_log")
-      .select("id, actor_id, action, target_type, target_id, details, created_at")
-      .order("created_at", { ascending: false })
-      .limit(50),
+    isMasterAdmin
+      ? supabase
+          .from("activity_log")
+          .select("id, actor_id, action, target_type, target_id, details, created_at")
+          .order("created_at", { ascending: false })
+          .limit(50)
+      : Promise.resolve({ data: [] }),
     supabase
       .from("profiles")
       .select("id, email, username, requested_admin_id")
@@ -203,7 +205,7 @@ export default async function AdminPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           {isMasterAdmin ? <TabsTrigger value="all-users">All Users</TabsTrigger> : null}
-          <TabsTrigger value="activity">Activity Log</TabsTrigger>
+          {isMasterAdmin ? <TabsTrigger value="activity">Activity Log</TabsTrigger> : null}
         </TabsList>
 
         <TabsContent value="overview" className="flex flex-col gap-6">
@@ -391,21 +393,19 @@ export default async function AdminPage() {
           </TabsContent>
         ) : null}
 
-        <TabsContent value="activity">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent activity</CardTitle>
-              <CardDescription>
-                {isMasterAdmin
-                  ? "Everything happening in Falah."
-                  : "Activity involving you and your assigned Students."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ActivityFeed rows={activityRows ?? []} emailById={activityEmail} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {isMasterAdmin ? (
+          <TabsContent value="activity">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent activity</CardTitle>
+                <CardDescription>Everything happening in Falah.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ActivityFeed rows={activityRows ?? []} emailById={activityEmail} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   );

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
+import { displayName } from "@/lib/profile-label";
 import {
   Card,
   CardContent,
@@ -27,7 +28,7 @@ export default async function AppLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, status, module_access")
+    .select("role, status, module_access, first_name, last_name, username, email")
     .eq("id", user?.id)
     .single();
 
@@ -55,7 +56,7 @@ export default async function AppLayout({
 
   return (
     <AppShell
-      email={user?.email ?? ""}
+      displayName={profile ? displayName(profile) : (user?.email ?? "")}
       role={profile?.role ?? "member"}
       moduleAccess={(profile?.module_access as ModuleAccess) ?? DEFAULT_MODULE_ACCESS}
     >

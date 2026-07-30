@@ -68,6 +68,8 @@
   --color-foreground: var(--foreground);
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-foreground: var(--terracotta-foreground);
   --font-sans: var(--font-body);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-body);
@@ -127,6 +129,8 @@
   --accent-foreground: oklch(0.98 0.015 90);
   --gold: oklch(0.72 0.13 80);
   --gold-foreground: oklch(0.28 0.06 80);
+  --terracotta: oklch(0.68 0.14 45);
+  --terracotta-foreground: oklch(0.28 0.08 40);
   --destructive: oklch(0.577 0.19 25);
   --border: oklch(0.9 0.025 90);
   --input: oklch(0.9 0.025 90);
@@ -166,6 +170,8 @@
   --accent-foreground: oklch(0.2 0.03 155);
   --gold: oklch(0.78 0.13 80);
   --gold-foreground: oklch(0.25 0.05 80);
+  --terracotta: oklch(0.72 0.13 45);
+  --terracotta-foreground: oklch(0.25 0.06 40);
   --destructive: oklch(0.704 0.19 22);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);

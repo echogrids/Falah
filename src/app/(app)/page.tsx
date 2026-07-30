@@ -1,48 +1,58 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PrayerBeads } from "@/components/layout/prayer-beads";
 import { FalahMark } from "@/components/layout/falah-mark";
 import { DateHeader } from "@/components/dashboard/date-header";
-import { BadgesList } from "@/components/reports/badges-list";
-import { LeaderboardTable } from "@/components/reports/leaderboard-table";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { StudentProgressCard } from "@/components/dashboard/student-progress-card";
-import { getDailyTotals } from "@/lib/reports/daily-totals";
-import { getBadges } from "@/lib/reports/badges";
-import { getLeaderboard } from "@/lib/reports/leaderboard";
-import { getManageableStudents } from "@/lib/proxy-entry";
+import { ModuleActionCard } from "@/components/home/module-action-card";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
-import { MANDATORY_PRAYERS } from "@/lib/ibadah/constants";
-import { formatRs } from "@/lib/format-currency";
-import { profileLabel, displayName } from "@/lib/profile-label";
-import type { ScoringSettings } from "@/lib/ibadah/scoring";
-import { UtensilsCrossed, Wallet } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-const WINDOW_DAYS = 7;
+import { displayName } from "@/lib/profile-label";
+import { Moon, RotateCcw, HeartHandshake, Landmark } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMoney } from "@/lib/format-currency";
 
 function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function maxDailySalahScore(scoring: ScoringSettings): number {
-  const bestStatus = Math.max(
-    scoring.on_time_points,
-    scoring.late_points,
-    scoring.qala_points,
-    0,
-  );
-  const bonuses = Math.max(0, scoring.jamaah_bonus_points) + Math.max(0, scoring.masjid_bonus_points);
-  return MANDATORY_PRAYERS.length * (bestStatus + bonuses);
-}
+const ACTION_TILES = [
+  {
+    module: "ibadah" as const,
+    href: "/ibadah",
+    label: "Munājāh",
+    description: "Log today's prayers",
+    icon: Moon,
+    badgeClassName: "bg-primary/15",
+    iconClassName: "text-primary",
+  },
+  {
+    module: "qala" as const,
+    href: "/qala",
+    label: "Qala",
+    description: "Log completed Qala",
+    icon: RotateCcw,
+    badgeClassName: "bg-gold/20",
+    iconClassName: "text-gold-foreground",
+  },
+  {
+    module: "sponsorship" as const,
+    href: "/sponsorship",
+    label: "Zād",
+    description: "Log a transaction",
+    icon: HeartHandshake,
+    badgeClassName: "bg-accent/15",
+    iconClassName: "text-accent",
+  },
+  {
+    module: "charity" as const,
+    href: "/charity",
+    label: "Sadaqah",
+    description: "Log a donation",
+    icon: Landmark,
+    badgeClassName: "bg-terracotta/20",
+    iconClassName: "text-terracotta-foreground",
+  },
+];
 
-export default async function DashboardPage() {
+export default async function HomePage() {
   const supabase = await createClient();
   // Middleware already validated this request's JWT against Supabase's
   // Auth server; read the session locally instead of re-validating.
@@ -55,44 +65,27 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, module_access, first_name, last_name, username, email")
+    .select("module_access, first_name, last_name, username, email")
     .eq("id", user.id)
     .single();
 
   const moduleAccess =
     (profile?.module_access as ModuleAccess | undefined) ?? DEFAULT_MODULE_ACCESS;
-  const role = profile?.role ?? "member";
-  const isAdmin = role === "admin" || role === "master_admin";
   const greetingName = profile?.first_name || (profile ? displayName(profile) : "");
 
   const today = isoDate(new Date());
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - (WINDOW_DAYS - 1));
-  const startIso = isoDate(start);
-  const endIso = isoDate(end);
-
-  const [
-    { data: prayerEntries },
-    dailyTotals,
-    badges,
-    { data: weekPrayerEntries },
-    { data: scoringSettings },
-  ] = await Promise.all([
+  const [{ data: prayerEntries }, { data: charityOffers }] = await Promise.all([
     supabase
       .from("prayer_entries")
       .select("prayer, status")
       .eq("member_id", user.id)
       .eq("prayer_day", today),
-    getDailyTotals(supabase, user.id, WINDOW_DAYS),
-    getBadges(supabase, user.id),
-    supabase
-      .from("prayer_entries")
-      .select("status")
-      .eq("member_id", user.id)
-      .gte("prayer_day", startIso)
-      .lte("prayer_day", endIso),
-    supabase.from("scoring_settings").select("*").single(),
+    moduleAccess.charity
+      ? supabase
+          .from("charity_offers")
+          .select("amount, currency, paid_total, status")
+          .eq("member_id", user.id)
+      : Promise.resolve({ data: null }),
   ]);
 
   const statuses: Record<string, string> = {};
@@ -100,97 +93,29 @@ export default async function DashboardPage() {
     statuses[entry.prayer] = entry.status;
   }
 
-  const todayScore = dailyTotals[dailyTotals.length - 1]?.score ?? 0;
-  const weeklyScore = dailyTotals.reduce((sum, day) => sum + day.score, 0);
-  const loggedCount = weekPrayerEntries?.length ?? 0;
-  const onTimeCount =
-    weekPrayerEntries?.filter((entry) => entry.status === "on_time").length ?? 0;
-  const onTimeRate = loggedCount > 0 ? Math.round((onTimeCount / loggedCount) * 100) : 0;
-  const bestStreak = Math.max(0, ...badges.map((badge) => badge.value));
-
-  const dailyMax = scoringSettings ? maxDailySalahScore(scoringSettings as ScoringSettings) : 0;
-  const weeklyMax = dailyMax * WINDOW_DAYS;
-
-  const [qalaBalancesResult, sponsorshipResult, sponsorshipSettingsResult] = await Promise.all([
-    moduleAccess.qala
-      ? supabase.from("qala_balances").select("current_balance").eq("member_id", user.id)
-      : Promise.resolve({ data: null }),
-    moduleAccess.sponsorship
-      ? supabase
-          .from("sponsorships")
-          .select("intended_total, donated_total, intended_meals, donated_meals")
-          .eq("member_id", user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    moduleAccess.sponsorship
-      ? supabase.from("sponsorship_settings").select("unit_price").single()
-      : Promise.resolve({ data: null }),
-  ]);
-
-  const qalaOutstanding = moduleAccess.qala
-    ? (qalaBalancesResult.data ?? []).reduce((sum, balance) => sum + balance.current_balance, 0)
-    : null;
-
-  const sponsorshipTotals = moduleAccess.sponsorship
-    ? sponsorshipResult.data ?? {
-        intended_total: 0,
-        donated_total: 0,
-        intended_meals: 0,
-        donated_meals: 0,
-      }
-    : null;
-  const sponsorshipUnitPrice = sponsorshipSettingsResult.data?.unit_price ?? 0;
-  const sponsorshipPendingMeals = sponsorshipTotals
-    ? Math.max(0, sponsorshipTotals.intended_meals - sponsorshipTotals.donated_meals)
-    : 0;
-  const sponsorshipPendingAmount = sponsorshipPendingMeals * sponsorshipUnitPrice;
-
-  let studentCards: Array<{
-    id: string;
-    label: string;
-    todayCompleted: number;
-    weeklyScore: number;
-  }> = [];
-  let familyLeaderboard: Awaited<ReturnType<typeof getLeaderboard>> = [];
-
-  if (isAdmin) {
-    const students = await getManageableStudents(supabase, user.id, role);
-    const studentIds = students.map((student) => student.id);
-    const scopeIds = role === "master_admin" ? undefined : [...studentIds, user.id];
-
-    const [todayRows, weeklyPerStudent, leaderboard] = await Promise.all([
-      studentIds.length > 0
-        ? supabase
-            .from("prayer_entries")
-            .select("member_id, prayer")
-            .in("member_id", studentIds)
-            .eq("prayer_day", today)
-        : Promise.resolve({ data: [] as { member_id: string; prayer: string }[] }),
-      Promise.all(studentIds.map((id) => getDailyTotals(supabase, id, WINDOW_DAYS))),
-      getLeaderboard(supabase, startIso, scopeIds),
-    ]);
-
-    const todayCountByStudent = new Map<string, number>();
-    for (const row of todayRows.data ?? []) {
-      todayCountByStudent.set(
-        row.member_id,
-        (todayCountByStudent.get(row.member_id) ?? 0) + 1,
-      );
-    }
-
-    studentCards = students.map((student, index) => ({
-      id: student.id,
-      label: profileLabel(student),
-      todayCompleted: todayCountByStudent.get(student.id) ?? 0,
-      weeklyScore: weeklyPerStudent[index].reduce((sum, day) => sum + day.score, 0),
-    }));
-
-    familyLeaderboard = leaderboard;
+  // Sum offered-but-unpaid across offers, per currency (never combined
+  // across currencies), so the home tile mirrors the Sadaqah page's own
+  // pending calculation.
+  const sadaqahPendingByCurrency = new Map<string, number>();
+  for (const offer of charityOffers ?? []) {
+    if (offer.status === "fulfilled" || offer.status === "cancelled") continue;
+    const pending = offer.amount - offer.paid_total;
+    sadaqahPendingByCurrency.set(
+      offer.currency,
+      (sadaqahPendingByCurrency.get(offer.currency) ?? 0) + pending,
+    );
   }
+  const sadaqahBadge =
+    Array.from(sadaqahPendingByCurrency.entries())
+      .filter(([, pending]) => pending > 0)
+      .map(([currency, pending]) => formatMoney(pending, currency))
+      .join(" · ") || undefined;
 
-  const studentsCompleteToday = studentCards.filter(
-    (student) => student.todayCompleted >= MANDATORY_PRAYERS.length,
-  ).length;
+  const statusBadgeByModule: Partial<Record<(typeof ACTION_TILES)[number]["module"], string>> = {
+    charity: sadaqahBadge,
+  };
+
+  const visibleTiles = ACTION_TILES.filter((tile) => moduleAccess[tile.module]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -208,213 +133,37 @@ export default async function DashboardPage() {
             Assalamu alaikum{greetingName ? `, ${greetingName}` : ""}
           </h1>
           <p className="text-primary-foreground/80">
-            {isAdmin
-              ? "Here's today, so far — for you and your family."
-              : "Here's today, so far."}
+            What would you like to log today?
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard
-          label="Today's score"
-          value={dailyMax > 0 ? `${todayScore} / ${dailyMax}` : todayScore}
-          accentClassName="bg-primary"
-        />
-        <StatCard
-          label={`${WINDOW_DAYS}-day score`}
-          value={weeklyMax > 0 ? `${weeklyScore} / ${weeklyMax}` : weeklyScore}
-          accentClassName="bg-accent"
-        />
-        <StatCard
-          label="On-time rate"
-          value={`${onTimeRate}%`}
-          sub="last 7 days"
-          accentClassName="bg-gold"
-        />
-        <StatCard
-          label="Best streak"
-          value={bestStreak}
-          sub="days"
-          accentClassName="bg-chart-4"
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Today&apos;s prayers</CardTitle>
-          <CardDescription>
-            <Link href="/ibadah" className="underline underline-offset-4">
-              Log today&apos;s Munājāh
-            </Link>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <PrayerBeads statuses={statuses} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Badges</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BadgesList badges={badges} />
-        </CardContent>
-      </Card>
-
-      {moduleAccess.qala || moduleAccess.sponsorship ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {moduleAccess.qala ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Qala Tracker</CardTitle>
-                <CardDescription>
-                  <Link href="/qala" className="underline underline-offset-4">
-                    Manage balances
-                  </Link>
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold text-foreground">
-                  {qalaOutstanding ?? 0}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  prayers still outstanding
-                </p>
-              </CardContent>
-            </Card>
-          ) : null}
-          {moduleAccess.sponsorship ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Zād</CardTitle>
-                <CardDescription>
-                  <Link href="/sponsorship" className="underline underline-offset-4">
-                    Log a transaction
-                  </Link>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-3 gap-2 text-center">
-                <div className={sponsorshipPendingMeals > 0 ? "rounded-lg bg-destructive/10 py-1" : ""}>
-                  <p
-                    className={`flex items-center justify-center gap-1 font-sans text-base font-semibold tabular-nums ${sponsorshipPendingMeals > 0 ? "text-destructive" : "text-foreground"}`}
-                  >
-                    <Wallet className="size-3.5" />
-                    {formatRs(sponsorshipPendingAmount)}
-                  </p>
-                  <p
-                    className={`flex items-center justify-center gap-1 text-xs ${sponsorshipPendingMeals > 0 ? "text-destructive/80" : "text-muted-foreground"}`}
-                  >
-                    <UtensilsCrossed className="size-3" />
-                    Pending · {sponsorshipPendingMeals}
-                  </p>
-                </div>
-                <div>
-                  <p className="flex items-center justify-center gap-1 font-sans text-base font-semibold tabular-nums text-foreground">
-                    <Wallet className="size-3.5" />
-                    {formatRs(sponsorshipTotals?.intended_total ?? 0)}
-                  </p>
-                  <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                    <UtensilsCrossed className="size-3" />
-                    Intended · {sponsorshipTotals?.intended_meals ?? 0}
-                  </p>
-                </div>
-                <div>
-                  <p className="flex items-center justify-center gap-1 font-sans text-base font-semibold tabular-nums text-foreground">
-                    <Wallet className="size-3.5" />
-                    {formatRs(sponsorshipTotals?.donated_total ?? 0)}
-                  </p>
-                  <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                    <UtensilsCrossed className="size-3" />
-                    Donated · {sponsorshipTotals?.donated_meals ?? 0}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+      {visibleTiles.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {visibleTiles.map((tile) => (
+            <ModuleActionCard
+              key={tile.href}
+              href={tile.href}
+              label={tile.label}
+              description={tile.description}
+              icon={tile.icon}
+              badgeClassName={tile.badgeClassName}
+              iconClassName={tile.iconClassName}
+              statusBadge={statusBadgeByModule[tile.module]}
+            />
+          ))}
         </div>
       ) : null}
 
-      {isAdmin ? (
-        <>
-          <div>
-            <h2 className="font-heading text-xl font-semibold text-foreground">
-              Family overview
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              How your Students are doing this week.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <StatCard
-              label="Students"
-              value={studentCards.length}
-              accentClassName="bg-accent"
-            />
-            <StatCard
-              label="Complete today"
-              value={`${studentsCompleteToday}/${studentCards.length}`}
-              sub="all 5 Salah logged"
-              accentClassName="bg-primary"
-            />
-            <StatCard
-              label="Avg weekly score"
-              value={
-                studentCards.length > 0
-                  ? Math.round(
-                      studentCards.reduce((sum, s) => sum + s.weeklyScore, 0) /
-                        studentCards.length,
-                    )
-                  : 0
-              }
-              accentClassName="bg-gold"
-            />
-          </div>
-
-          {studentCards.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Students</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                {studentCards.map((student) => (
-                  <StudentProgressCard
-                    key={student.id}
-                    memberId={student.id}
-                    label={student.label}
-                    todayCompleted={student.todayCompleted}
-                    todayTotal={MANDATORY_PRAYERS.length}
-                    weeklyScore={student.weeklyScore}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Students</CardTitle>
-                <CardDescription>
-                  <Link href="/admin" className="underline underline-offset-4">
-                    Add Students in Users
-                  </Link>
-                </CardDescription>
-              </CardHeader>
-              <CardContent />
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Leaderboard</CardTitle>
-              <CardDescription>Last {WINDOW_DAYS} days.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <LeaderboardTable entries={familyLeaderboard} />
-            </CardContent>
-          </Card>
-        </>
+      {moduleAccess.ibadah ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Today&apos;s prayers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PrayerBeads statuses={statuses} />
+          </CardContent>
+        </Card>
       ) : null}
     </div>
   );

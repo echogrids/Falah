@@ -1,10 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  LayoutDashboard,
+  Home,
   Moon,
   RotateCcw,
   HeartHandshake,
   Landmark,
+  Target,
   BarChart3,
   Users,
   Settings,
@@ -22,7 +23,7 @@ export type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, module: null, primary: true },
+  { href: "/", label: "Home", icon: Home, module: null, primary: true },
   { href: "/ibadah", label: "Munājāh", icon: Moon, module: "ibadah", primary: true },
   { href: "/qala", label: "Qala", icon: RotateCcw, module: "qala", primary: true },
   {
@@ -39,6 +40,7 @@ export const navItems: NavItem[] = [
     module: "charity",
     primary: false,
   },
+  { href: "/niyyah", label: "Niyyah", icon: Target, module: "niyyah", primary: false },
   { href: "/reports", label: "Reports", icon: BarChart3, module: "reports", primary: false },
   { href: "/admin", label: "Users", icon: Users, module: null, primary: false },
   { href: "/settings", label: "Settings", icon: Settings, module: null, primary: false },

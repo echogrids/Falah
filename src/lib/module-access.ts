@@ -4,6 +4,7 @@ export type ModuleAccess = {
   sponsorship: boolean;
   charity: boolean;
   reports: boolean;
+  niyyah: boolean;
 };
 
 export const DEFAULT_MODULE_ACCESS: ModuleAccess = {
@@ -12,4 +13,5 @@ export const DEFAULT_MODULE_ACCESS: ModuleAccess = {
   sponsorship: false,
   charity: false,
   reports: true,
+  niyyah: false,
 };

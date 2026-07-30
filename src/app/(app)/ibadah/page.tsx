@@ -92,6 +92,7 @@ export default async function IbadahPage({
       </div>
 
       <IbadahDayForm
+        key={`${memberId}-${prayerDay}`}
         prayerDay={prayerDay}
         memberId={memberId}
         prayerEntries={prayerEntryMap}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { HandCoins } from "lucide-react";
+import { useActionState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -12,51 +13,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createCharityOffer } from "@/app/(app)/charity/actions";
+import { createCharityOffer, updateCharityOffer } from "@/app/(app)/charity/actions";
 import { initialActionState } from "@/lib/action-state";
-import { CURRENCY_OPTIONS } from "@/lib/format-currency";
 
 export type InstitutionOption = {
   id: string;
   name: string;
-  default_currency: string;
 };
 
 export function OfferForm({
+  mode,
   memberId,
+  offerId,
   institutions,
+  institutionName,
+  defaultInstitutionId,
+  defaultValues,
+  cancelHref,
 }: {
+  mode: "create" | "edit";
   memberId: string;
-  institutions: InstitutionOption[];
+  offerId?: string;
+  institutions?: InstitutionOption[];
+  institutionName?: string;
+  defaultInstitutionId?: string;
+  defaultValues?: { purpose: string; amount: number; notes: string | null };
+  cancelHref: string;
 }) {
   const [state, formAction, isPending] = useActionState(
-    createCharityOffer,
+    mode === "create" ? createCharityOffer : updateCharityOffer,
     initialActionState,
   );
-  const [currency, setCurrency] = useState("Rs");
-
-  if (institutions.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Add an institution above before making an offer.
-      </p>
-    );
-  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="member_id" value={memberId} />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="col-span-2 flex flex-col gap-2 sm:col-span-2">
+    <form action={formAction} className="flex flex-col gap-5">
+      {mode === "create" ? (
+        <input type="hidden" name="member_id" value={memberId} />
+      ) : (
+        <input type="hidden" name="offer_id" value={offerId} />
+      )}
+
+      {mode === "create" && institutions ? (
+        <div className="flex flex-col gap-2">
           <Label htmlFor="institution_id">Institution</Label>
-          <Select
-            name="institution_id"
-            defaultValue={institutions[0].id}
-            onValueChange={(value) => {
-              const institution = institutions.find((item) => item.id === value);
-              if (institution) setCurrency(institution.default_currency);
-            }}
-          >
+          <Select name="institution_id" defaultValue={defaultInstitutionId ?? institutions[0]?.id}>
             <SelectTrigger id="institution_id" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -69,38 +69,56 @@ export function OfferForm({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="amount">Amount</Label>
-          <Input id="amount" type="text" inputMode="decimal" name="amount" required />
+      ) : (
+        <div className="flex flex-col gap-1.5 rounded-xl bg-muted/60 px-4 py-3">
+          <span className="text-xs text-muted-foreground">Institution</span>
+          <span className="text-sm font-medium text-foreground">{institutionName}</span>
         </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="currency">Currency</Label>
-          <Input
-            id="currency"
-            name="currency"
-            list="charity-currency-options"
-            value={currency}
-            onChange={(event) => setCurrency(event.target.value)}
-          />
-          <datalist id="charity-currency-options">
-            {CURRENCY_OPTIONS.map((code) => (
-              <option key={code} value={code} />
-            ))}
-          </datalist>
-        </div>
-      </div>
+      )}
+
       <div className="flex flex-col gap-2">
-        <Label htmlFor="offer_remarks">Remarks</Label>
-        <Input id="offer_remarks" name="remarks" placeholder="What's this offer for?" />
+        <Label htmlFor="purpose">Purpose</Label>
+        <Input
+          id="purpose"
+          name="purpose"
+          placeholder="What's this offer for?"
+          defaultValue={defaultValues?.purpose}
+          required
+        />
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={isPending} className="w-full sm:w-auto">
-          <HandCoins className="size-4" />
-          {isPending ? "Saving..." : "Make offer"}
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="amount">Amount (₹)</Label>
+        <Input
+          id="amount"
+          type="text"
+          inputMode="decimal"
+          name="amount"
+          defaultValue={defaultValues?.amount}
+          required
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="notes">Notes (optional)</Label>
+        <Textarea
+          id="notes"
+          name="notes"
+          placeholder="Anything else worth remembering"
+          defaultValue={defaultValues?.notes ?? ""}
+          rows={3}
+        />
+      </div>
+
+      {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={isPending} className="flex-1 sm:flex-none">
+          {isPending ? "Saving..." : mode === "create" ? "Save Niyyah" : "Save changes"}
         </Button>
-        {state.error ? (
-          <span className="text-sm text-destructive">{state.error}</span>
-        ) : null}
+        <Button type="button" variant="outline" asChild className="flex-1 sm:flex-none">
+          <Link href={cancelHref}>Cancel</Link>
+        </Button>
       </div>
     </form>
   );

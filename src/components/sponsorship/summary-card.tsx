@@ -1,7 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { AlertTriangle, UtensilsCrossed } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { formatRs } from "@/lib/format-currency";
+import { Progress } from "@/components/ui/progress";
+import { formatMoney } from "@/lib/format-currency";
 import { cn } from "@/lib/utils";
 
 export function SummaryCard({
@@ -45,7 +46,7 @@ export function SummaryCard({
               )}
             >
               <Icon className="size-4.5 shrink-0" />
-              {formatRs(amount)}
+              {formatMoney(amount)}
             </p>
             <p
               className={cn(
@@ -68,14 +69,7 @@ export function SummaryCard({
             {meals} meals
           </p>
         )}
-        {progress !== undefined ? (
-          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-            <div
-              className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
-              style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-            />
-          </div>
-        ) : null}
+        {progress !== undefined ? <Progress value={progress} className="mt-1" /> : null}
       </CardHeader>
     </Card>
   );

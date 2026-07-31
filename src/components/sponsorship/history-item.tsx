@@ -1,5 +1,5 @@
 import { formatDateTime } from "@/lib/format-date";
-import { formatRs } from "@/lib/format-currency";
+import { formatMoney } from "@/lib/format-currency";
 import { TRANSACTION_TYPE_META, type SponsorshipTransaction } from "@/components/sponsorship/types";
 
 export function HistoryItem({ transaction }: { transaction: SponsorshipTransaction }) {
@@ -15,12 +15,12 @@ export function HistoryItem({ transaction }: { transaction: SponsorshipTransacti
         <div className="flex items-center justify-between gap-2">
           <span className="font-medium text-foreground">{meta?.label ?? transaction.type}</span>
           <span className="shrink-0 font-medium tabular-nums text-foreground">
-            {formatRs(transaction.amount)}
+            {formatMoney(transaction.amount)}
           </span>
         </div>
         <span className="text-xs text-muted-foreground" suppressHydrationWarning>
           {transaction.meals && transaction.unit_price
-            ? `${transaction.meals} meals × ${formatRs(transaction.unit_price)}`
+            ? `${transaction.meals} meals × ${formatMoney(transaction.unit_price)}`
             : `${transaction.meals ?? 0} meals`}{" "}
           · {formatDateTime(transaction.created_at)}
         </span>

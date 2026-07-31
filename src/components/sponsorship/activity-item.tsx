@@ -1,5 +1,5 @@
 import { formatRelativeDate } from "@/lib/format-date";
-import { formatRs } from "@/lib/format-currency";
+import { formatMoney } from "@/lib/format-currency";
 import { TRANSACTION_TYPE_META, type SponsorshipTransaction } from "@/components/sponsorship/types";
 
 export function ActivityItem({ transaction }: { transaction: SponsorshipTransaction }) {
@@ -18,7 +18,7 @@ export function ActivityItem({ transaction }: { transaction: SponsorshipTransact
         </span>
       </div>
       <span className="shrink-0 font-medium tabular-nums text-foreground">
-        {formatRs(transaction.amount)}
+        {formatMoney(transaction.amount)}
       </span>
     </li>
   );

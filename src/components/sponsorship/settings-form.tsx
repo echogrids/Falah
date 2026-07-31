@@ -22,7 +22,7 @@ export function SponsorshipSettingsForm({ unitPrice }: { unitPrice: number }) {
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
           <div className="flex max-w-xs flex-col gap-2">
-            <Label htmlFor="unit_price">Price per meal (Rs)</Label>
+            <Label htmlFor="unit_price">Price per meal (₹)</Label>
             <Input
               id="unit_price"
               type="text"

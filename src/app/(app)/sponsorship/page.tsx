@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ModuleActionCard } from "@/components/home/module-action-card";
 import { SummaryCard } from "@/components/sponsorship/summary-card";
 import { ActivityItem } from "@/components/sponsorship/activity-item";
-import { EmptyState } from "@/components/sponsorship/empty-state";
+import { EmptyState } from "@/components/ui/empty-state";
 import { AddTransactionFab } from "@/components/sponsorship/add-transaction-fab";
 import { SavedToast } from "@/components/sponsorship/saved-toast";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";

@@ -1,42 +1,45 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { HeartHandshake } from "lucide-react";
-import { HistoryFilters, type HistoryTypeFilter } from "@/components/sponsorship/history-filters";
-import { HistoryItem } from "@/components/sponsorship/history-item";
+import { Landmark } from "lucide-react";
+import {
+  HistoryFilters,
+  type HistoryTypeFilter,
+} from "@/components/charity/history-filters";
+import { HistoryItem } from "@/components/charity/history-item";
 import { EmptyState } from "@/components/ui/empty-state";
-import type { SponsorshipTransaction } from "@/components/sponsorship/types";
+import type { CharityActivityEvent } from "@/lib/charity-activity";
 
 function startOfDay(iso: string) {
   const d = new Date(iso);
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-function groupByRecency(transactions: SponsorshipTransaction[]) {
+function groupByRecency(events: CharityActivityEvent[]) {
   const today = startOfDay(new Date().toISOString());
   const yesterday = today - 86_400_000;
 
-  const groups: { label: string; rows: SponsorshipTransaction[] }[] = [
+  const groups: { label: string; rows: CharityActivityEvent[] }[] = [
     { label: "Today", rows: [] },
     { label: "Yesterday", rows: [] },
     { label: "Earlier", rows: [] },
   ];
 
-  for (const transaction of transactions) {
-    const day = startOfDay(transaction.created_at);
-    if (day === today) groups[0].rows.push(transaction);
-    else if (day === yesterday) groups[1].rows.push(transaction);
-    else groups[2].rows.push(transaction);
+  for (const event of events) {
+    const day = startOfDay(event.date);
+    if (day === today) groups[0].rows.push(event);
+    else if (day === yesterday) groups[1].rows.push(event);
+    else groups[2].rows.push(event);
   }
 
   return groups.filter((group) => group.rows.length > 0);
 }
 
 export function HistoryList({
-  transactions,
+  events,
   homeHref,
 }: {
-  transactions: SponsorshipTransaction[];
+  events: CharityActivityEvent[];
   homeHref: string;
 }) {
   const [search, setSearch] = useState("");
@@ -44,20 +47,26 @@ export function HistoryList({
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return transactions.filter((transaction) => {
-      if (type !== "all" && transaction.type !== type) return false;
-      if (query && !(transaction.note ?? "").toLowerCase().includes(query)) return false;
+    return events.filter((event) => {
+      if (type !== "all" && event.type !== type) return false;
+      if (
+        query &&
+        !event.institutionName.toLowerCase().includes(query) &&
+        !(event.purpose ?? "").toLowerCase().includes(query)
+      ) {
+        return false;
+      }
       return true;
     });
-  }, [transactions, search, type]);
+  }, [events, search, type]);
 
-  if (transactions.length === 0) {
+  if (events.length === 0) {
     return (
       <EmptyState
-        icon={HeartHandshake}
-        title="No transactions yet"
-        description="Intentions and donations you log will show up here."
-        action={{ label: "Go to Zād Home", href: homeHref }}
+        icon={Landmark}
+        title="No activity yet"
+        description="Institutions, offers, and donations you log will show up here."
+        action={{ label: "Go to Sadaqah Home", href: homeHref }}
       />
     );
   }
@@ -70,7 +79,7 @@ export function HistoryList({
 
       {groups.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          No transactions match your search.
+          No activity matches your search.
         </p>
       ) : (
         groups.map((group) => (
@@ -79,8 +88,8 @@ export function HistoryList({
               {group.label}
             </h2>
             <ul className="flex flex-col rounded-2xl bg-card px-4 ring-1 ring-foreground/8 shadow-[var(--shadow-soft)]">
-              {group.rows.map((transaction) => (
-                <HistoryItem key={transaction.id} transaction={transaction} />
+              {group.rows.map((event) => (
+                <HistoryItem key={`${event.type}-${event.id}`} event={event} />
               ))}
             </ul>
           </div>

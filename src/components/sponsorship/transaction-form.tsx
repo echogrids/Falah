@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { logSponsorshipTransaction } from "@/app/(app)/sponsorship/actions";
 import { initialActionState } from "@/lib/action-state";
-import { formatRs } from "@/lib/format-currency";
+import { formatMoney } from "@/lib/format-currency";
 
 export function TransactionForm({
   memberId,
@@ -70,7 +70,7 @@ export function TransactionForm({
         <div className="flex flex-col gap-2 rounded-xl bg-muted/60 px-4 py-3">
           <Label className="text-xs text-muted-foreground">Price per Meal</Label>
           <p className="text-sm font-medium tabular-nums text-foreground">
-            {formatRs(unitPrice)}
+            {formatMoney(unitPrice)}
           </p>
         </div>
         <div className="flex flex-col gap-2 rounded-xl bg-muted/60 px-4 py-3">
@@ -78,7 +78,7 @@ export function TransactionForm({
             <Wallet className="size-3" />
             Amount
           </Label>
-          <p className="text-sm font-medium tabular-nums text-foreground">{formatRs(amount)}</p>
+          <p className="text-sm font-medium tabular-nums text-foreground">{formatMoney(amount)}</p>
         </div>
       </div>
 

@@ -83,7 +83,7 @@ export default async function HomePage() {
     moduleAccess.charity
       ? supabase
           .from("charity_offers")
-          .select("amount, currency, paid_total, status")
+          .select("amount, paid_total, status")
           .eq("member_id", user.id)
       : Promise.resolve({ data: null }),
     getBadges(supabase, user.id),
@@ -94,23 +94,13 @@ export default async function HomePage() {
     statuses[entry.prayer] = entry.status;
   }
 
-  // Sum offered-but-unpaid across offers, per currency (never combined
-  // across currencies), so the home tile mirrors the Sadaqah page's own
-  // pending calculation.
-  const sadaqahPendingByCurrency = new Map<string, number>();
-  for (const offer of charityOffers ?? []) {
-    if (offer.status === "fulfilled" || offer.status === "cancelled") continue;
-    const pending = offer.amount - offer.paid_total;
-    sadaqahPendingByCurrency.set(
-      offer.currency,
-      (sadaqahPendingByCurrency.get(offer.currency) ?? 0) + pending,
-    );
-  }
-  const sadaqahBadge =
-    Array.from(sadaqahPendingByCurrency.entries())
-      .filter(([, pending]) => pending > 0)
-      .map(([currency, pending]) => formatMoney(pending, currency))
-      .join(" · ") || undefined;
+  // Sum offered-but-unpaid across offers, so the home tile mirrors the
+  // Sadaqah page's own pending calculation.
+  const sadaqahPending = (charityOffers ?? []).reduce((sum, offer) => {
+    if (offer.status === "fulfilled" || offer.status === "cancelled") return sum;
+    return sum + (offer.amount - offer.paid_total);
+  }, 0);
+  const sadaqahBadge = sadaqahPending > 0 ? formatMoney(sadaqahPending) : undefined;
 
   const statusBadgeByModule: Partial<Record<(typeof ACTION_TILES)[number]["module"], string>> = {
     charity: sadaqahBadge,

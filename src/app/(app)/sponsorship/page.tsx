@@ -1,20 +1,19 @@
+import Link from "next/link";
+import { Clock, HandCoins, History, Settings, Wallet, HeartHandshake } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { UtensilsCrossed, Wallet, AlertTriangle } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { LogTransactionForm } from "@/components/sponsorship/log-transaction-form";
-import { SponsorshipSettingsForm } from "@/components/settings/sponsorship-settings-form";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ModuleActionCard } from "@/components/home/module-action-card";
+import { SummaryCard } from "@/components/sponsorship/summary-card";
+import { ActivityItem } from "@/components/sponsorship/activity-item";
+import { EmptyState } from "@/components/sponsorship/empty-state";
+import { AddTransactionFab } from "@/components/sponsorship/add-transaction-fab";
+import { SavedToast } from "@/components/sponsorship/saved-toast";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
 import { StudentSelector } from "@/components/layout/student-selector";
 import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
 import type { ModuleAccess } from "@/lib/module-access";
-import { formatRs } from "@/lib/format-currency";
-import { cn } from "@/lib/utils";
+import type { SponsorshipTransaction } from "@/components/sponsorship/types";
 
 export default async function SponsorshipPage({
   searchParams,
@@ -54,7 +53,7 @@ export default async function SponsorshipPage({
       .select("id, type, amount, meals, unit_price, note, created_at")
       .eq("member_id", memberId)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(5),
     supabase.from("sponsorship_settings").select("unit_price").single(),
   ]);
 
@@ -66,13 +65,21 @@ export default async function SponsorshipPage({
   // it was actually given.
   const pendingMeals = Math.max(0, intendedMeals - donatedMeals);
   const pendingAmount = pendingMeals * unitPrice;
+  const progressPct = intendedMeals > 0 ? (donatedMeals / intendedMeals) * 100 : 0;
+
+  const studentParam = memberId !== user!.id ? `&student=${memberId}` : "";
+  const studentQS = memberId !== user!.id ? `?student=${memberId}` : "";
+  const intendedHref = `/sponsorship/new?type=intended${studentParam}`;
+  const donatedHref = `/sponsorship/new?type=donated${studentParam}`;
+  const historyHref = `/sponsorship/history${studentQS}`;
+  const settingsHref = "/sponsorship/settings";
+
+  const rows = (transactions ?? []) as SponsorshipTransaction[];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 pb-16">
       <div>
-        <h1 className="font-heading text-2xl font-semibold text-foreground">
-          Zād
-        </h1>
+        <h1 className="font-heading text-2xl font-semibold text-foreground">Zād</h1>
         <p className="mt-1 text-muted-foreground">
           Intended, donated, and pending running totals.
         </p>
@@ -85,116 +92,90 @@ export default async function SponsorshipPage({
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card
-          className={cn(
-            pendingMeals > 0 &&
-              "border-2 border-destructive/40 bg-destructive/5 shadow-[0_0_0_1px_var(--destructive)_inset]",
-          )}
-        >
-          <CardHeader>
-            <CardDescription
-              className={cn(
-                "flex items-center gap-1.5",
-                pendingMeals > 0 && "text-destructive",
-              )}
-            >
-              {pendingMeals > 0 ? <AlertTriangle className="size-3.5" /> : null}
-              Pending
-            </CardDescription>
-            <CardTitle
-              className={cn(
-                "flex items-center gap-1.5 font-sans text-2xl tabular-nums",
-                pendingMeals > 0 && "text-destructive",
-              )}
-            >
-              <Wallet className="size-4.5" />
-              {formatRs(pendingAmount)}
-            </CardTitle>
-            <p
-              className={cn(
-                "flex items-center gap-1 text-xs",
-                pendingMeals > 0 ? "text-destructive/80" : "text-muted-foreground",
-              )}
-            >
-              <UtensilsCrossed className="size-3" />
-              {pendingMeals} meals
-            </p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Intended</CardDescription>
-            <CardTitle className="flex items-center gap-1.5 font-sans text-2xl tabular-nums">
-              <Wallet className="size-4.5 text-muted-foreground" />
-              {formatRs(totals?.intended_total ?? 0)}
-            </CardTitle>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <UtensilsCrossed className="size-3" />
-              {intendedMeals} meals
-            </p>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Donated</CardDescription>
-            <CardTitle className="flex items-center gap-1.5 font-sans text-2xl tabular-nums">
-              <Wallet className="size-4.5 text-muted-foreground" />
-              {formatRs(totals?.donated_total ?? 0)}
-            </CardTitle>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <UtensilsCrossed className="size-3" />
-              {donatedMeals} meals
-            </p>
-          </CardHeader>
-        </Card>
+        <SummaryCard
+          label="Outstanding"
+          icon={Wallet}
+          amount={pendingAmount}
+          meals={pendingMeals}
+          alert={pendingMeals > 0}
+        />
+        <SummaryCard
+          label="Donated"
+          icon={Wallet}
+          amount={totals?.donated_total ?? 0}
+          meals={donatedMeals}
+        />
+        <SummaryCard label="Remaining" icon={HandCoins} meals={pendingMeals} progress={progressPct} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Log a transaction</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <LogTransactionForm memberId={memberId} unitPrice={unitPrice} />
-        </CardContent>
-      </Card>
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 font-heading text-lg font-semibold text-foreground">Quick Actions</h2>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <ModuleActionCard
+            href={intendedHref}
+            label="Add Intention"
+            description="Commit to meals to give"
+            icon={Clock}
+            badgeClassName="bg-primary/15"
+            iconClassName="text-primary"
+          />
+          <ModuleActionCard
+            href={donatedHref}
+            label="Record Donation"
+            description="Log meals you've given"
+            icon={HandCoins}
+            badgeClassName="bg-gold/20"
+            iconClassName="text-gold-foreground"
+          />
+          <ModuleActionCard
+            href={historyHref}
+            label="History"
+            description="View all transactions"
+            icon={History}
+            badgeClassName="bg-accent/15"
+            iconClassName="text-accent"
+          />
+          <ModuleActionCard
+            href={settingsHref}
+            label="Settings"
+            description="Price per meal"
+            icon={Settings}
+            badgeClassName="bg-terracotta/20"
+            iconClassName="text-terracotta-foreground"
+          />
+        </div>
+      </section>
 
-      {profile?.role === "master_admin" ? (
-        <SponsorshipSettingsForm unitPrice={unitPrice} />
-      ) : null}
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="font-heading text-lg font-semibold text-foreground">Recent Activity</h2>
+          {rows.length > 0 ? (
+            <Button variant="link" size="sm" asChild className="h-auto p-0">
+              <Link href={historyHref}>View All</Link>
+            </Button>
+          ) : null}
+        </div>
+        {rows.length > 0 ? (
+          <Card>
+            <CardContent>
+              <ul className="flex flex-col">
+                {rows.map((transaction) => (
+                  <ActivityItem key={transaction.id} transaction={transaction} />
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={HeartHandshake}
+            title="No activity yet"
+            description="Add an intention or record a donation to get started."
+          />
+        )}
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transactions && transactions.length > 0 ? (
-            <ul className="flex flex-col gap-2">
-              {transactions.map((transaction) => (
-                <li
-                  key={transaction.id}
-                  className="flex flex-col gap-0.5 border-b border-border py-2 text-sm last:border-0"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="capitalize">{transaction.type}</span>
-                    <span className="font-medium tabular-nums">
-                      {formatRs(transaction.amount)}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    {transaction.meals && transaction.unit_price
-                      ? `${transaction.meals} meals × ${formatRs(transaction.unit_price)}`
-                      : transaction.note}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No transactions logged yet.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <AddTransactionFab intendedHref={intendedHref} donatedHref={donatedHref} />
+      <SavedToast />
     </div>
   );
 }

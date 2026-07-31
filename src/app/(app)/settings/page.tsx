@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { ScoringSettingsForm } from "@/components/settings/scoring-settings-form";
-import { SponsorshipSettingsForm } from "@/components/settings/sponsorship-settings-form";
 import type { ScoringSettings } from "@/lib/ibadah/scoring";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -13,12 +12,10 @@ export default async function SettingsPage() {
   } = await supabase.auth.getSession();
   const user = session?.user;
 
-  const [{ data: profile }, { data: settings }, { data: sponsorshipSettings }] =
-    await Promise.all([
-      supabase.from("profiles").select("role").eq("id", user?.id).single(),
-      supabase.from("scoring_settings").select("*").single(),
-      supabase.from("sponsorship_settings").select("unit_price").single(),
-    ]);
+  const [{ data: profile }, { data: settings }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user?.id).single(),
+    supabase.from("scoring_settings").select("*").single(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,20 +34,6 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Scoring settings</CardTitle>
-            <CardDescription>
-              Only a Master Admin can change these.
-            </CardDescription>
-          </CardHeader>
-          <CardContent />
-        </Card>
-      )}
-
-      {profile?.role === "master_admin" && sponsorshipSettings ? (
-        <SponsorshipSettingsForm unitPrice={sponsorshipSettings.unit_price} />
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Zād settings</CardTitle>
             <CardDescription>
               Only a Master Admin can change these.
             </CardDescription>

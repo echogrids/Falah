@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { updateSponsorshipSettings } from "@/app/(app)/settings/actions";
+import { updateSponsorshipSettings } from "@/app/(app)/sponsorship/actions";
 import { initialActionState } from "@/lib/action-state";
 
 export function SponsorshipSettingsForm({ unitPrice }: { unitPrice: number }) {
@@ -17,7 +17,7 @@ export function SponsorshipSettingsForm({ unitPrice }: { unitPrice: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Zād settings</CardTitle>
+        <CardTitle>Price per meal</CardTitle>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-4">
@@ -32,9 +32,7 @@ export function SponsorshipSettingsForm({ unitPrice }: { unitPrice: number }) {
               required
             />
           </div>
-          {state.error ? (
-            <p className="text-sm text-destructive">{state.error}</p>
-          ) : null}
+          {state.error ? <p className="text-sm text-destructive">{state.error}</p> : null}
           <Button type="submit" disabled={isPending} className="w-full sm:w-fit">
             {isPending ? "Saving..." : "Save"}
           </Button>

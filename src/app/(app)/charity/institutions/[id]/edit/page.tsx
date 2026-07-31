@@ -30,16 +30,21 @@ export default async function EditInstitutionPage({
     return <ModuleDisabledNotice title="Sadaqah" />;
   }
 
-  const canEditInstitution = profile?.role === "admin" || profile?.role === "master_admin";
-  if (!canEditInstitution) notFound();
+  const role = profile?.role;
+  if (role !== "admin" && role !== "master_admin") notFound();
 
   const { data: institution } = await supabase
     .from("charity_institutions")
-    .select("id, name, notes")
+    .select("id, name, notes, created_by")
     .eq("id", id)
     .single();
 
   if (!institution) notFound();
+
+  // An Admin (Parent) may only edit institutions they created themselves —
+  // not Master Admin's global ones, nor another Admin's family-scoped ones.
+  const canEditInstitution = role === "master_admin" || institution.created_by === user!.id;
+  if (!canEditInstitution) notFound();
 
   const detailHref = `/charity/institutions/${id}`;
 

@@ -43,19 +43,24 @@ export default async function InstitutionDetailPage({
   }
 
   const role = profile?.role ?? "member";
-  const canEditInstitution = role === "admin" || role === "master_admin";
+  const isAdminRole = role === "admin" || role === "master_admin";
 
   const students = await getManageableStudents(supabase, user!.id, role);
   const memberId = resolveTargetMemberId(student, user!.id, students);
-  const canDonate = memberId === user!.id || canEditInstitution;
+  const canDonate = memberId === user!.id || isAdminRole;
 
   const { data: institution } = await supabase
     .from("charity_institutions")
-    .select("id, name, notes")
+    .select("id, name, notes, created_by")
     .eq("id", id)
     .single();
 
   if (!institution) notFound();
+
+  // An Admin (Parent) may only edit institutions they created themselves —
+  // not Master Admin's global ones, nor another Admin's family-scoped ones.
+  const canEditInstitution =
+    role === "master_admin" || (role === "admin" && institution.created_by === user!.id);
 
   const { data: offers } = await supabase
     .from("charity_offers")

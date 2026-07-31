@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -84,10 +85,13 @@ function PrayerTapTile({
 export function QalaLogForm({
   memberId,
   pendingByPrayer,
+  homeHref,
 }: {
   memberId: string;
   pendingByPrayer: Record<string, number>;
+  homeHref: string;
 }) {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     logQalaCompletions,
     initialActionState,
@@ -98,9 +102,10 @@ export function QalaLogForm({
   useEffect(() => {
     if (wasSaving.current && !isPending && !state.error) {
       setCounts({});
+      router.push(homeHref);
     }
     wasSaving.current = isPending;
-  }, [isPending, state.error]);
+  }, [isPending, state.error, homeHref, router]);
 
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 

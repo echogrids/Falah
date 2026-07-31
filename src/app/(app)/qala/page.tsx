@@ -1,8 +1,10 @@
+import Link from "next/link";
+import { CheckCircle2, History, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { MANDATORY_PRAYERS } from "@/lib/ibadah/constants";
-import { QalaLogForm } from "@/components/qala/qala-log-form";
-import { QalaSettingsCard } from "@/components/qala/qala-settings-card";
+import { ModuleActionCard } from "@/components/home/module-action-card";
 import { QalaLogTable } from "@/components/qala/qala-log-table";
+import { Button } from "@/components/ui/button";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
 import { StudentSelector } from "@/components/layout/student-selector";
 import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
@@ -38,30 +40,31 @@ export default async function QalaPage({
   const [{ data: balances }, { data: logRows }] = await Promise.all([
     supabase
       .from("qala_balances")
-      .select("prayer, initial_balance, current_balance")
+      .select("prayer, current_balance")
       .eq("member_id", memberId),
     supabase
       .from("qala_transactions")
       .select("id, prayer, count, remarks, created_at")
       .eq("member_id", memberId)
       .order("created_at", { ascending: false })
-      .limit(30),
+      .limit(5),
   ]);
 
   const pendingByPrayer: Record<string, number> = {};
-  const initialByPrayer: Record<string, number> = {};
   for (const balance of balances ?? []) {
     pendingByPrayer[balance.prayer] = balance.current_balance;
-    initialByPrayer[balance.prayer] = balance.initial_balance;
   }
 
-  const canManage =
-    profile?.role === "admin" || profile?.role === "master_admin";
+  const canManage = profile?.role === "admin" || profile?.role === "master_admin";
 
   const totalPending = MANDATORY_PRAYERS.reduce(
     (sum, prayer) => sum + (pendingByPrayer[prayer.key] ?? 0),
     0,
   );
+
+  const studentQS = memberId !== user!.id ? `?student=${memberId}` : "";
+  const logHref = `/qala/log${studentQS}`;
+  const historyHref = `/qala/history${studentQS}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,13 +100,49 @@ export default async function QalaPage({
         </div>
       )}
 
-      <QalaLogForm memberId={memberId} pendingByPrayer={pendingByPrayer} />
+      <section className="flex flex-col gap-3">
+        <h2 className="px-1 font-heading text-lg font-semibold text-foreground">Quick Actions</h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          <ModuleActionCard
+            href={logHref}
+            label="Log Completed"
+            description="Record prayers made up"
+            icon={CheckCircle2}
+            badgeClassName="bg-primary/15"
+            iconClassName="text-primary"
+          />
+          <ModuleActionCard
+            href={historyHref}
+            label="History"
+            description="View the full log"
+            icon={History}
+            badgeClassName="bg-accent/15"
+            iconClassName="text-accent"
+          />
+          {canManage ? (
+            <ModuleActionCard
+              href="/qala/settings"
+              label="Settings"
+              description="Set totals owed"
+              icon={Settings}
+              badgeClassName="bg-terracotta/20"
+              iconClassName="text-terracotta-foreground"
+            />
+          ) : null}
+        </div>
+      </section>
 
-      {canManage ? (
-        <QalaSettingsCard memberId={memberId} initialByPrayer={initialByPrayer} />
-      ) : null}
-
-      <QalaLogTable rows={logRows ?? []} />
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="font-heading text-lg font-semibold text-foreground">Recent Log</h2>
+          {(logRows ?? []).length > 0 ? (
+            <Button variant="link" size="sm" asChild className="h-auto p-0">
+              <Link href={historyHref}>View All</Link>
+            </Button>
+          ) : null}
+        </div>
+        <QalaLogTable rows={logRows ?? []} />
+      </section>
     </div>
   );
 }

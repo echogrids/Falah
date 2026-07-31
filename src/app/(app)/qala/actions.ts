@@ -98,6 +98,7 @@ export async function setQalaTotal(
   });
 
   revalidatePath("/qala");
+  revalidatePath("/qala/settings");
   return { error: null };
 }
 
@@ -170,5 +171,7 @@ export async function logQalaCompletions(
   });
 
   revalidatePath("/qala");
+  revalidatePath("/qala/log");
+  revalidatePath("/qala/history");
   return { error: null };
 }

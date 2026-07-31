@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Target } from "lucide-react";
+import { History, Plus, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ModuleDisabledNotice } from "@/components/layout/module-disabled-notice";
 import { StudentSelector } from "@/components/layout/student-selector";
@@ -39,11 +39,13 @@ export default async function NiyyahPage({
     .from("niyyahs")
     .select("id, title, intention, target_count, current_count, deadline, status")
     .eq("member_id", memberId)
-    .order("status", { ascending: true })
+    .eq("status", "active")
     .order("created_at", { ascending: false });
 
   const rows = (niyyahs ?? []) as NiyyahListRow[];
-  const newHref = `/niyyah/new${memberId !== user!.id ? `?student=${memberId}` : ""}`;
+  const studentQS = memberId !== user!.id ? `?student=${memberId}` : "";
+  const newHref = `/niyyah/new${studentQS}`;
+  const historyHref = `/niyyah/history${studentQS}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,11 +56,19 @@ export default async function NiyyahPage({
         </p>
       </div>
 
-      <StudentSelector
-        students={students}
-        selectedId={memberId === user!.id ? "self" : memberId}
-        selfLabel="Myself"
-      />
+      <div className="flex flex-wrap items-end gap-4">
+        <StudentSelector
+          students={students}
+          selectedId={memberId === user!.id ? "self" : memberId}
+          selfLabel="Myself"
+        />
+        <Button variant="outline" size="sm" asChild>
+          <Link href={historyHref}>
+            <History className="size-4" />
+            History
+          </Link>
+        </Button>
+      </div>
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-14 text-center">
@@ -67,7 +77,7 @@ export default async function NiyyahPage({
           </span>
           <div className="flex flex-col gap-1">
             <p className="font-heading text-base font-semibold text-foreground">
-              No Niyyah yet
+              No active Niyyah
             </p>
             <p className="max-w-xs text-sm text-muted-foreground">
               Commit to a count of dhikr or swalath, and log your recitations as you go.

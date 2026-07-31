@@ -14,10 +14,14 @@ export function AppBar({
   displayName,
   role,
   moduleAccess,
+  pendingApprovals,
+  pendingPasswordResets,
 }: {
   displayName: string;
   role: string;
   moduleAccess: ModuleAccess;
+  pendingApprovals: number;
+  pendingPasswordResets: number;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -49,7 +53,10 @@ export function AppBar({
           </Link>
 
           <div className="flex shrink-0 items-center gap-1">
-            <NotificationBell />
+            <NotificationBell
+              pendingApprovals={pendingApprovals}
+              pendingPasswordResets={pendingPasswordResets}
+            />
             <button
               type="button"
               aria-label="Open profile menu"
@@ -67,6 +74,7 @@ export function AppBar({
         onOpenChange={setDrawerOpen}
         moduleAccess={moduleAccess}
         isAdmin={isAdmin}
+        pendingApprovals={pendingApprovals}
       />
       <ProfileSheet
         open={profileOpen}

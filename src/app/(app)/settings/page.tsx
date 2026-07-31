@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { ScoringSettingsForm } from "@/components/settings/scoring-settings-form";
+import { ResetDataButton } from "@/components/settings/reset-data-button";
+import {
+  resetSponsorshipData,
+  resetQalaData,
+  resetCharityData,
+} from "@/app/(app)/settings/actions";
 import type { ScoringSettings } from "@/lib/ibadah/scoring";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -41,6 +47,35 @@ export default async function SettingsPage() {
           <CardContent />
         </Card>
       )}
+
+      {profile?.role === "master_admin" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reset data</CardTitle>
+            <CardDescription>
+              Wipes the module&apos;s logged history and zeroes its running
+              counts for every member. This can&apos;t be undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <ResetDataButton
+              label="Reset Zad / Zakat Counts"
+              confirmMessage="Reset all Zad (food sponsorship) counts? This clears every member's log and totals — it can't be undone."
+              action={resetSponsorshipData}
+            />
+            <ResetDataButton
+              label="Reset Sadaqa Counts"
+              confirmMessage="Reset all Sadaqa (charity) counts? This clears every member's offers and payments — it can't be undone."
+              action={resetCharityData}
+            />
+            <ResetDataButton
+              label="Reset Qada / Qala Counts"
+              confirmMessage="Reset all Qada/Qala counts? This clears every member's log and balances — it can't be undone."
+              action={resetQalaData}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

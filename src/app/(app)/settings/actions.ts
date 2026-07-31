@@ -89,3 +89,45 @@ export async function updateScoringSettings(
   revalidatePath("/settings");
   return { error: null };
 }
+
+async function resetModuleData(
+  rpcName: "reset_sponsorship_data" | "reset_qala_data" | "reset_charity_data",
+  activityAction: string,
+): Promise<SettingsActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "You must be signed in." };
+
+  const { error } = await supabase.rpc(rpcName);
+  if (error) return { error: error.message };
+
+  await logActivity(supabase, {
+    actorId: user.id,
+    action: activityAction,
+    targetType: "module_data",
+  });
+
+  revalidatePath("/settings");
+  return { error: null };
+}
+
+export async function resetSponsorshipData(
+  _prevState: SettingsActionState,
+): Promise<SettingsActionState> {
+  return resetModuleData("reset_sponsorship_data", "reset_sponsorship_data");
+}
+
+export async function resetQalaData(
+  _prevState: SettingsActionState,
+): Promise<SettingsActionState> {
+  return resetModuleData("reset_qala_data", "reset_qala_data");
+}
+
+export async function resetCharityData(
+  _prevState: SettingsActionState,
+): Promise<SettingsActionState> {
+  return resetModuleData("reset_charity_data", "reset_charity_data");
+}

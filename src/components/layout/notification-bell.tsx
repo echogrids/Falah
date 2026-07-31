@@ -1,29 +1,39 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-// UI structure only — no notifications backend exists yet, so this is
-// static placeholder content, not wired to any real data source.
-const PLACEHOLDER_NOTIFICATIONS = [
-  {
-    id: "1",
-    title: "Asr is coming up",
-    detail: "Log it once you've prayed.",
-    time: "Just now",
-  },
-  {
-    id: "2",
-    title: "Zād balance pending",
-    detail: "A couple of meals are still awaiting payment.",
-    time: "Yesterday",
-  },
-];
-
-export function NotificationBell() {
+export function NotificationBell({
+  pendingApprovals,
+  pendingPasswordResets,
+}: {
+  pendingApprovals: number;
+  pendingPasswordResets: number;
+}) {
   const [open, setOpen] = useState(false);
-  const hasUnread = PLACEHOLDER_NOTIFICATIONS.length > 0;
+
+  const notifications = [
+    pendingApprovals > 0
+      ? {
+          id: "approvals",
+          title: `${pendingApprovals} pending ${pendingApprovals === 1 ? "approval" : "approvals"}`,
+          detail: "Review requests waiting in Family.",
+        }
+      : null,
+    pendingPasswordResets > 0
+      ? {
+          id: "password-resets",
+          title: `${pendingPasswordResets} password reset ${pendingPasswordResets === 1 ? "request" : "requests"}`,
+          detail: "Resolve them in Family → Overview.",
+        }
+      : null,
+  ].filter((n): n is { id: string; title: string; detail: string } => n !== null);
+
+  // No actionable notifications: hide the bell entirely instead of showing
+  // an empty state.
+  if (notifications.length === 0) return null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -34,12 +44,10 @@ export function NotificationBell() {
           className="relative flex size-11 shrink-0 items-center justify-center rounded-full text-foreground transition-colors duration-150 hover:bg-muted active:scale-95"
         >
           <Bell className="size-5" strokeWidth={2} />
-          {hasUnread ? (
-            <span
-              aria-hidden="true"
-              className="absolute top-2.5 right-2.5 flex size-2.5 rounded-full bg-destructive ring-2 ring-card"
-            />
-          ) : null}
+          <span
+            aria-hidden="true"
+            className="absolute top-2.5 right-2.5 flex size-2.5 rounded-full bg-destructive ring-2 ring-card"
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent>
@@ -49,18 +57,18 @@ export function NotificationBell() {
           </p>
         </div>
         <ul className="flex flex-col">
-          {PLACEHOLDER_NOTIFICATIONS.map((notification) => (
-            <li
-              key={notification.id}
-              className="flex flex-col gap-0.5 border-b border-border px-4 py-3 last:border-0"
-            >
-              <span className="text-sm font-medium text-foreground">
-                {notification.title}
-              </span>
-              <span className="text-xs text-muted-foreground">{notification.detail}</span>
-              <span className="mt-0.5 text-[11px] text-muted-foreground/70">
-                {notification.time}
-              </span>
+          {notifications.map((notification) => (
+            <li key={notification.id} className="border-b border-border last:border-0">
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-muted"
+              >
+                <span className="text-sm font-medium text-foreground">
+                  {notification.title}
+                </span>
+                <span className="text-xs text-muted-foreground">{notification.detail}</span>
+              </Link>
             </li>
           ))}
         </ul>

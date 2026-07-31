@@ -77,54 +77,33 @@ export async function signup(
     mobile: typeof mobile === "string" && mobile ? mobile : null,
   };
 
-  let hasSession: boolean;
+  // Always create through the admin API and sign in directly — never
+  // Supabase's public signUp(), which (depending on project mailer
+  // settings) can require confirming a link that gets emailed out and
+  // points at an unreachable Site URL (localhost in dev). This also keeps
+  // the no-email path (placeholder login address) and the with-email path
+  // identical, instead of forking on whether an email was given.
+  const authEmail = providedEmail || placeholderEmail(username);
 
-  if (providedEmail) {
-    const { data, error } = await supabase.auth.signUp({
-      email: providedEmail,
-      password,
-      options: { data: metadata },
-    });
+  const adminClient = createAdminClient();
+  const { error: createError } = await adminClient.auth.admin.createUser({
+    email: authEmail,
+    password,
+    email_confirm: true,
+    user_metadata: metadata,
+  });
 
-    if (error) {
-      return { error: error.message, message: null };
-    }
-
-    hasSession = Boolean(data.session);
-  } else {
-    // No email given: create the account (with a placeholder login email)
-    // through the admin API so it doesn't need an unreachable confirmation
-    // link, then sign in with the password they just chose.
-    const adminClient = createAdminClient();
-    const { error: createError } = await adminClient.auth.admin.createUser({
-      email: placeholderEmail(username),
-      password,
-      email_confirm: true,
-      user_metadata: metadata,
-    });
-
-    if (createError) {
-      return { error: createError.message, message: null };
-    }
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: placeholderEmail(username),
-      password,
-    });
-
-    if (signInError) {
-      return { error: signInError.message, message: null };
-    }
-
-    hasSession = true;
+  if (createError) {
+    return { error: createError.message, message: null };
   }
 
-  if (!hasSession) {
-    return {
-      error: null,
-      message:
-        "Check your email to confirm your account. After that, wait for approval before signing in.",
-    };
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: authEmail,
+    password,
+  });
+
+  if (signInError) {
+    return { error: signInError.message, message: null };
   }
 
   redirect("/");

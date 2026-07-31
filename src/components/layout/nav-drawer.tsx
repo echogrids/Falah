@@ -13,11 +13,13 @@ export function NavDrawer({
   onOpenChange,
   moduleAccess,
   isAdmin,
+  pendingApprovals,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   moduleAccess: ModuleAccess;
   isAdmin: boolean;
+  pendingApprovals: number;
 }) {
   const pathname = usePathname();
 
@@ -55,6 +57,18 @@ export function NavDrawer({
               >
                 <item.icon className="size-5 shrink-0" strokeWidth={2} />
                 {item.label}
+                {item.href === "/admin" && pendingApprovals > 0 ? (
+                  <span
+                    className={cn(
+                      "ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
+                      isActive
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-destructive/15 text-destructive",
+                    )}
+                  >
+                    {pendingApprovals}
+                  </span>
+                ) : null}
               </Link>
             );
           })}

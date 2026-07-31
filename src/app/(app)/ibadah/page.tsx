@@ -1,6 +1,9 @@
+import Link from "next/link";
+import { History } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { DateNav } from "@/components/ibadah/date-nav";
 import { StudentSelector } from "@/components/layout/student-selector";
+import { Button } from "@/components/ui/button";
 import { getManageableStudents, resolveTargetMemberId } from "@/lib/proxy-entry";
 import {
   IbadahDayForm,
@@ -82,13 +85,19 @@ export default async function IbadahPage({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap items-end gap-4">
         <DateNav date={prayerDay} />
         <StudentSelector
           students={students}
           selectedId={memberId === user!.id ? "self" : memberId}
           selfLabel="Myself"
         />
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/ibadah/history${student ? `?student=${memberId}` : ""}`}>
+            <History className="size-4" />
+            History
+          </Link>
+        </Button>
       </div>
 
       <IbadahDayForm

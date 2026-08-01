@@ -170,42 +170,58 @@ export function IbadahDayForm({
   );
 
   const toggleExpand = useCallback((prayerKey: string) => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+      setJustCompletedKey(null);
+    }
     setExpandedKey((prev) => (prev === prayerKey ? null : prayerKey));
+  }, []);
+
+  // Shared by all three fields (Status, Congregation, Location) so the card
+  // stays open through the whole entry — picking one field just restarts
+  // this timer instead of collapsing immediately. It only fires once the
+  // user has paused, so a single-field entry (e.g. marking a prayer
+  // "Missed") still auto-advances on its own, while a full Status →
+  // Congregation → Location pass never has to be reopened.
+  const scheduleAdvance = useCallback((prayerKey: string) => {
+    setJustCompletedKey(prayerKey);
+    if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = setTimeout(() => {
+      setJustCompletedKey(null);
+      const idx = MANDATORY_PRAYERS.findIndex((prayer) => prayer.key === prayerKey);
+      const nextIncomplete = MANDATORY_PRAYERS.slice(idx + 1).find(
+        (prayer) => !prayerStateRef.current[prayer.key].status,
+      );
+      setExpandedKey(nextIncomplete?.key ?? null);
+    }, COMPLETION_ADVANCE_MS);
   }, []);
 
   const handleStatusChange = useCallback(
     (prayerKey: string, value: string) => {
       updateField(prayerKey, "status", value);
       scheduleSave(0);
-      setJustCompletedKey(prayerKey);
-
-      if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
-      advanceTimerRef.current = setTimeout(() => {
-        setJustCompletedKey(null);
-        const idx = MANDATORY_PRAYERS.findIndex((prayer) => prayer.key === prayerKey);
-        const nextIncomplete = MANDATORY_PRAYERS.slice(idx + 1).find(
-          (prayer) => !prayerStateRef.current[prayer.key].status,
-        );
-        setExpandedKey(nextIncomplete?.key ?? null);
-      }, COMPLETION_ADVANCE_MS);
+      scheduleAdvance(prayerKey);
     },
-    [scheduleSave, updateField],
+    [scheduleSave, updateField, scheduleAdvance],
   );
 
   const handleCongregationChange = useCallback(
     (prayerKey: string, value: string) => {
       updateField(prayerKey, "congregation", value);
       scheduleSave(0);
+      scheduleAdvance(prayerKey);
     },
-    [scheduleSave, updateField],
+    [scheduleSave, updateField, scheduleAdvance],
   );
 
   const handleLocationChange = useCallback(
     (prayerKey: string, value: string) => {
       updateField(prayerKey, "location", value);
       scheduleSave(0);
+      scheduleAdvance(prayerKey);
     },
-    [scheduleSave, updateField],
+    [scheduleSave, updateField, scheduleAdvance],
   );
 
   const handleGenericChange = useCallback(

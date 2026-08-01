@@ -3,7 +3,6 @@ import { UserAvatar } from "@/components/layout/user-avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { roleLabel } from "@/lib/roles";
 import { displayName } from "@/lib/profile-label";
-import { isPlaceholderEmail } from "@/lib/placeholder-email";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -16,13 +15,13 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, first_name, last_name, username, email")
+    .select("role, first_name, last_name, username, email, contact_email")
     .eq("id", user?.id)
     .single();
 
   const name = profile ? displayName(profile) : (user?.email ?? "");
-  const email = profile?.email ?? user?.email ?? null;
-  const showEmail = email && !isPlaceholderEmail(email);
+  const email = profile?.contact_email ?? null;
+  const showEmail = Boolean(email);
 
   return (
     <div className="flex flex-col gap-6">

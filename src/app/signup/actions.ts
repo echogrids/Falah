@@ -75,6 +75,7 @@ export async function signup(
     last_name: lastName,
     username,
     mobile: typeof mobile === "string" && mobile ? mobile : null,
+    contact_email: providedEmail || null,
   };
 
   // Always create through the admin API and sign in directly — never
@@ -83,7 +84,7 @@ export async function signup(
   // points at an unreachable Site URL (localhost in dev). This also keeps
   // the no-email path (placeholder login address) and the with-email path
   // identical, instead of forking on whether an email was given.
-  const authEmail = providedEmail || placeholderEmail(username);
+  const authEmail = providedEmail || placeholderEmail();
 
   const adminClient = createAdminClient();
   const { error: createError } = await adminClient.auth.admin.createUser({

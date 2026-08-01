@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/sheet";
 import { updateUserProfile } from "@/app/(app)/admin/actions";
 import { initialActionState } from "@/lib/action-state";
-import { isPlaceholderEmail } from "@/lib/placeholder-email";
 import { profileLabel } from "@/lib/profile-label";
 
 export type EditableProfile = {
   id: string;
   email: string;
+  contact_email: string | null;
   first_name: string | null;
   last_name: string | null;
   username: string | null;
@@ -34,7 +34,7 @@ export function EditUserSheet({ profile }: { profile: EditableProfile }) {
     updateUserProfile,
     initialActionState,
   );
-  const realEmail = isPlaceholderEmail(profile.email) ? "" : profile.email;
+  const realEmail = profile.contact_email ?? "";
 
   // Auto-close on success so the New password field (holding a plaintext
   // value) doesn't linger populated in the DOM after it's been saved.

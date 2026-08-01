@@ -344,7 +344,8 @@ export async function createUserByAdmin(
   if (usernameCheckError) return { error: usernameCheckError.message };
   if (!usernameAvailable) return { error: "That username is already taken." };
 
-  const authEmail = typeof email === "string" && email.trim() ? email.trim() : placeholderEmail(username);
+  const providedEmail = typeof email === "string" ? email.trim() : "";
+  const authEmail = providedEmail || placeholderEmail();
 
   const adminClient = createAdminClient();
   const { data: created, error: createError } =
@@ -359,6 +360,7 @@ export async function createUserByAdmin(
         last_name: lastName,
         username,
         mobile: typeof mobile === "string" && mobile ? mobile : null,
+        contact_email: providedEmail || null,
       },
     });
 
@@ -442,18 +444,27 @@ export async function updateUserProfile(
 
   const finalUsername = typeof username === "string" && username ? username : null;
   const providedEmail = typeof email === "string" ? email.trim() : "";
-  const authEmail = providedEmail || (finalUsername ? placeholderEmail(finalUsername) : "");
-
-  if (!authEmail) {
-    return { error: "Provide an Email, or a Username to generate a login address from." };
-  }
 
   const adminClient = createAdminClient();
-  const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, {
-    email: authEmail,
-    email_confirm: true,
-  });
-  if (emailError) return { error: emailError.message };
+
+  let authEmail = providedEmail;
+  if (providedEmail) {
+    const { error: emailError } = await adminClient.auth.admin.updateUserById(userId, {
+      email: authEmail,
+      email_confirm: true,
+    });
+    if (emailError) return { error: emailError.message };
+  } else {
+    // No new email given — keep the account's existing login address (real
+    // or placeholder) instead of rotating in a fresh placeholder on every
+    // edit that doesn't touch email.
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .single();
+    authEmail = existingProfile?.email ?? placeholderEmail();
+  }
 
   if (typeof newPassword === "string" && newPassword) {
     const { error: passwordError } = await adminClient.auth.admin.updateUserById(userId, {
@@ -485,6 +496,7 @@ export async function updateUserProfile(
     .from("profiles")
     .update({
       email: authEmail,
+      contact_email: providedEmail || null,
       first_name: typeof firstName === "string" && firstName ? firstName : null,
       last_name: typeof lastName === "string" && lastName ? lastName : null,
       username: finalUsername,

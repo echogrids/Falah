@@ -3,7 +3,6 @@ import { GreetingCard } from "@/components/home/greeting-card";
 import { TodaysProgress } from "@/components/home/todays-progress";
 import { TodaysReminder } from "@/components/home/todays-reminder";
 import { FeaturedBadgeCard } from "@/components/home/featured-badge-card";
-import { RecentActivity } from "@/components/home/recent-activity";
 import { ModuleActionCard } from "@/components/home/module-action-card";
 import { getBadges } from "@/lib/reports/badges";
 import { DEFAULT_MODULE_ACCESS, type ModuleAccess } from "@/lib/module-access";
@@ -151,13 +150,6 @@ export default async function HomePage() {
       <section className="flex flex-col gap-3">
         <h2 className="px-1 font-heading text-lg font-semibold text-foreground">Badges</h2>
         <FeaturedBadgeCard badge={featuredBadge} />
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="px-1 font-heading text-lg font-semibold text-foreground">
-          Recent Activity
-        </h2>
-        <RecentActivity />
       </section>
     </div>
   );

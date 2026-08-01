@@ -105,6 +105,7 @@ export default async function AdminPage() {
   let allProfiles: {
     id: string;
     email: string;
+    contact_email: string | null;
     role: string;
     module_access: ModuleAccess;
     first_name: string | null;
@@ -144,7 +145,9 @@ export default async function AdminPage() {
         .eq("status", "pending"),
       supabase
         .from("profiles")
-        .select("id, email, role, module_access, first_name, last_name, username, mobile")
+        .select(
+          "id, email, contact_email, role, module_access, first_name, last_name, username, mobile",
+        )
         .order("email"),
       supabase.from("admin_members").select("admin_id, member_id"),
       supabase
